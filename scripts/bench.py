@@ -253,7 +253,10 @@ async def build_client(args: argparse.Namespace):
         # lifespan 不会触发（ASGITransport 不调 lifespan），手工补齐 Agent 依赖
         app.state.store = SessionStore()
         app.state.bank = load_question_bank(settings.agent.question_bank)
-        app.state.registry = build_default_registry()
+        app.state.registry = build_default_registry(
+            app.state.bank, strategy=settings.rag.strategy, embedder_name=settings.rag.embedder
+        )
+        app.state.retriever = app.state.registry.retriever
 
         client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://inline")
         health = (await client.get("/health")).json()

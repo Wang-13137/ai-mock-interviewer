@@ -87,10 +87,21 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         app.state.store = SessionStore()
         if cfg.agent.enabled:
             app.state.bank = load_question_bank(cfg.agent.question_bank)
-            app.state.registry = build_default_registry()
+            try:
+                app.state.registry = build_default_registry(
+                    app.state.bank,
+                    strategy=cfg.rag.strategy,
+                    embedder_name=cfg.rag.embedder,
+                )
+                app.state.retriever = app.state.registry.retriever
+            except Exception as exc:
+                log.error("检索器构建失败，Agent 检索将不可用：%s", exc)
+                app.state.registry = build_default_registry()
+                app.state.retriever = None
         else:
             app.state.bank = {}
             app.state.registry = None
+            app.state.retriever = None
         log.info(
             "boot env=%s provider=%s model=%s ready=%s",
             cfg.env,
@@ -115,6 +126,8 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     def health(request: Request) -> HealthResponse:
         client: BaseLLMClient = request.app.state.client
         cfg: Settings = request.app.state.settings
+        retriever = getattr(request.app.state, "retriever", None)
+        meta = retriever.describe() if retriever is not None else {}
         return HealthResponse(
             env=cfg.env,
             provider=client.provider_name,
@@ -123,6 +136,8 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             version=cfg.version,
             agent_enabled=cfg.agent.enabled and request.app.state.registry is not None,
             tools=request.app.state.registry.names() if request.app.state.registry else [],
+            retrieval_strategy=meta.get("strategy", "") or cfg.rag.strategy,
+            semantic_retrieval=bool(meta.get("semantic_embedding", False)),
         )
 
     @app.get("/v1/tools", response_model=List[ToolSpec], tags=["agent"])

@@ -78,6 +78,10 @@ class HealthResponse(BaseModel):
     version: str = ""
     agent_enabled: bool = False
     tools: List[str] = Field(default_factory=list)
+    # 检索侧 red-line 标记：false 表示当前用的是替身嵌入（HashingEmbedder），
+    # 任何召回率数字都不得对外引用。让 /health 自己说真话，比写在文档里可靠。
+    retrieval_strategy: str = ""
+    semantic_retrieval: bool = False
 
 
 class AgentChatResponse(ChatResponse):

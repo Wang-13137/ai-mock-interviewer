@@ -50,7 +50,11 @@ async def _agent_loop(settings) -> None:
     client = build_client(settings)
     store = SessionStore()
     bank = load_question_bank(settings.agent.question_bank)
-    registry = build_default_registry() if settings.agent.enabled else None
+    registry = None
+    if settings.agent.enabled:
+        registry = build_default_registry(
+            bank, strategy=settings.rag.strategy, embedder_name=settings.rag.embedder
+        )
     loop = AgentLoop(client, registry, store, bank, max_steps=settings.agent.max_steps)
 
     print(f"[provider={client.provider_name} model={client.model} ready={client.ready}]")

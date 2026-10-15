@@ -2,7 +2,7 @@
 """工具注册表与四个种子工具。
 
 四个工具覆盖了面试 Agent 需要的最少能力，也正好对上 JD 里那几条：
-- `search_question_bank`  —— 检索（现在是关键词打分，**W2 换成向量检索，契约不变**）
+- `search_question_bank`  —— 检索（**W2 已换成 src/rag/ 的三策略检索器**）
 - `get_interview_progress`—— 读会话状态（面试是有状态的，这是和普通 chatbot 的分界线）
 - `save_candidate_note`   —— 写会话状态
 - `finish_interview`      —— 终局动作，产出结构化收尾
@@ -21,12 +21,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
+from ..rag.corpus import load_bank
+from ..rag.retriever import Retriever, Strategy
 from ..schemas.agent import ToolCall, ToolResult, ToolSpec
 from .state import SessionStore
 
 log = logging.getLogger("aimi.agent.tools")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# 与 validate() 保持一致的上界
+MAX_TOP_K = 5
 
 
 class ToolExecutionError(RuntimeError):
@@ -40,6 +45,8 @@ class ToolContext:
     store: SessionStore
     bank: Dict[str, Any]
     profile: Dict[str, Any]
+    # 由 build_default_registry 预建并注入；为 None 时工具会即时构建一个 BM25 检索器（仅用于测试与兜底）
+    retriever: Optional[Retriever] = None
 
 
 ToolFn = Callable[[Dict[str, Any], ToolContext], Any]
@@ -48,6 +55,7 @@ ToolFn = Callable[[Dict[str, Any], ToolContext], Any]
 class ToolRegistry:
     def __init__(self) -> None:
         self._tools: Dict[str, tuple[ToolSpec, ToolFn]] = {}
+        self.retriever: Optional[Retriever] = None  # 由 build_default_registry 预建
 
     def register(self, spec: ToolSpec, func: ToolFn) -> None:
         if spec.name in self._tools:
@@ -100,6 +108,10 @@ class ToolRegistry:
                 error=f"没有名为 {call.name} 的工具。可用工具只有：{known}。请从中选择一个。",
             )
 
+        # 调用方没带检索器时，把预建的注入进上下文（避免每轮对话重复建索引）
+        if self.retriever is not None and ctx.retriever is None:
+            ctx.retriever = self.retriever
+
         spec, func = entry
         try:
             self.validate(spec, dict(call.arguments))
@@ -120,63 +132,16 @@ class ToolRegistry:
 
 
 # --------------------------------------------------------------------------- #
-# 检索实现（关键词版）
+# 检索（委托给 src/rag/）
 # --------------------------------------------------------------------------- #
-_TOKEN_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9+#._-]*")
 
 # 由执行层注入、但不暴露给模型的参数。校验时要放行，否则模型每调一次都会撞「未知参数」
 INJECTED_PARAMS = {"session_id"}
 
 
 def load_question_bank(path: str | Path = "config/question_bank.json") -> Dict[str, Any]:
-    p = Path(path)
-    if not p.is_absolute():
-        p = REPO_ROOT / p
-    if not p.exists():
-        log.warning("题库文件不存在，检索工具将返回空结果: %s", p)
-        return {"version": "empty", "items": []}
-    return json.loads(p.read_text(encoding="utf-8"))
-
-
-def _tokens(text: str) -> List[str]:
-    """英文数字按词切，中文按 bigram 切。
-
-    刻意**不做**中文单字匹配：单字作为 token 会让「的」「学」这类字命中几乎所有条目，
-    检索退化成噪声（踩过：query「量子佛学」能匹配到向量库那题）。零宽先验带来的假命中
-    比漏召回更伤，因为模型会被一堆无关题目带偏。
-    """
-    out: List[str] = [t.lower() for t in _TOKEN_RE.findall(text or "")]
-    han = "".join(re.findall(r"[\u4e00-\u9fff]", text or ""))
-    if len(han) == 1:  # 单字查询退化为 unigram，否则永远召回空
-        out.append(han)
-    else:
-        out += [han[i:i + 2] for i in range(len(han) - 1)]
-    return out
-
-
-def score_item(item: Dict[str, Any], query_tokens: List[str], boost_dimensions: List[str]) -> float:
-    """BM25 的极简替身：标签权重 > 维度 > 题干；未覆盖维度加权。"""
-    if not query_tokens:
-        return 0.0
-    tags = " ".join(item.get("tags", []) or []).lower()
-    dim = (item.get("dimension") or "").lower()
-    q = (item.get("question") or "").lower()
-    score = 0.0
-    for t in set(query_tokens):
-        if t in tags:
-            score += 3.0
-        elif t in dim:
-            score += 2.0
-        elif t in q:
-            score += 1.0
-    # 只有真正命中了关键词才允许加权。否则难度加分会给所有条目一个「低保」，
-    # 检索退化成「按难度排序」，跟 query 无关。
-    if score <= 0:
-        return 0.0
-    if item.get("dimension") in boost_dimensions:
-        score *= 1.5
-    score += max(0.0, 0.2 * (int(item.get("difficulty", 2)) - 1))  # 难题略微优先
-    return score
+    """向后兼容的别名：题库加载已统一到 src.rag.corpus.load_bank。"""
+    return load_bank(path)
 
 
 # --------------------------------------------------------------------------- #
@@ -226,34 +191,33 @@ FINISH_SPEC = ToolSpec(
 
 
 def _search(arguments: Dict[str, Any], ctx: ToolContext) -> str:
-    import asyncio
-
     query = str(arguments.get("query", "")).strip()
     top_k = int(arguments.get("top_k", 3) or 3)
     items: List[Dict[str, Any]] = list(ctx.bank.get("items", []) or [])
     if not items:
         return "题库为空（未加载配置文件）。请直接凭专业知识向候选人提问。"
 
-    session_id = str(arguments.get("session_id", "") or "")
+    # 未考察维度加权：让 Agent 往覆盖面走，而不是沿当前话题一路钻到底
     boost: List[str] = []
+    session_id = str(arguments.get("session_id", "") or "")
     if session_id:
-        # 这里是同步上下文，取不到 await 版本的状态；由上层注入 remaining
         st = ctx.store.peek(session_id)
         if st:
             boost = st.remaining_dimensions
 
-    tokens = _tokens(query)
-    scored = [(score_item(it, tokens, boost), it) for it in items]
-    scored = [(s, it) for s, it in scored if s > 0]
-    if not scored:
-        return f"题库中没有与「{query}」相关的问题。请换一个角度提问，或直接凭常识追问。"
-    scored.sort(key=lambda x: (-x[0], x[1].get("id", "")))
+    retriever = ctx.retriever
+    if retriever is None:  # 测试/兜底路径：预建检索器缺失时即时构建
+        retriever = ctx.retriever = Retriever.from_bank(ctx.bank, strategy=Strategy.BM25)
 
-    lines = [f"检索到 {min(top_k, len(scored))} 条相关问题："]
-    for idx, (s, it) in enumerate(scored[:top_k], 1):
+    hits = retriever.search(query, top_k=top_k, boost_dimensions=boost)
+    if not hits:
+        return f"题库中没有与「{query}」相关的问题。请换一个角度提问，或直接凭常识追问。"
+
+    lines = [f"检索到 {len(hits)} 条相关问题："]
+    for idx, hit in enumerate(hits, 1):
+        c = hit.chunk
         lines.append(
-            f"{idx}. [{it.get('dimension','未分类')}] {it.get('question','')}"
-            f"（难度 {it.get('difficulty', 2)}/3，相关度 {s:.1f}）"
+            f"{idx}. [{c.dimension}] {c.question}（难度 {c.difficulty}/3，相关度 {hit.score:.2f}）"
         )
     lines.append("请挑选其中最贴题的一条，结合候选人刚刚的回答改写成追问。")
     return "\n".join(lines)
@@ -300,9 +264,25 @@ async def _finish(arguments: Dict[str, Any], ctx: ToolContext) -> str:
     return f"面试已标记结束。请向候选人复述这段总结：{summary}"
 
 
-def build_default_registry() -> ToolRegistry:
-    """默认工具集。`session_id` 由执行层注入 arguments，工具函数本身不必感知 HTTP 层。"""
+def build_default_registry(
+    bank: Optional[Dict[str, Any]] = None,
+    strategy: Strategy | str = Strategy.BM25,
+    embedder_name: str = "auto",
+) -> ToolRegistry:
+    """默认工具集。`session_id` 由执行层注入 arguments，工具函数本身不必感知 HTTP 层。
+
+    传 `bank` 进来时会预建检索器（推荐，避免首次调用时的建索引开销）；
+    不传则由 `_search` 在首次调用时即时构建一个 BM25 检索器。
+    """
     reg = ToolRegistry()
+    if bank:
+        try:
+            reg.retriever = Retriever.from_bank(bank, strategy=strategy, embedder_name=embedder_name)
+        except Exception as exc:  # 检索器建不起来不该让服务起不来
+            log.warning("检索器构建失败，回退到即时构建：%s", exc)
+            reg.retriever = None
+    else:
+        reg.retriever = None
     reg.register(SEARCH_SPEC, _search)
     reg.register(PROGRESS_SPEC, _progress)
     reg.register(NOTE_SPEC, _note)

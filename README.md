@@ -299,13 +299,83 @@ POST /v1/chat/agent              # 带工具的对话，响应里带完整 trace
 > ⚠️ 本机跑在离线替身上：进程一起、接口连通都已验证，但**工具是被脚本喂出来的，不是模型自己决定的**。
 > 换成真实模型之前，成功率 / 完成率 / 步数这些数字只代表「机制生效」，**一律不得写进简历或任何对外材料**。
 
+## 六之四、自建检索层（W2 地基，已就位）
+
+`search_question_bank` 背后已经从「关键词打分」换成真正的检索层 `src/rag/`：
+
+```
+src/rag/
+  tokenize.py   中文 bigram / 英文词级分词（不引 jieba）
+  corpus.py     题库 -> Chunk 语料，字段加权靠重复词项放大 TF
+  bm25.py       Okapi BM25，IDF 用非负变体（小语料专用）
+  vector.py     向量检索 + 两个 embedder（见下）
+  fusion.py     RRF 倒数排名融合
+  retriever.py  Retriever 统一入口，三种策略
+  evaluate.py   Recall@k / MRR@10 / Hit@1 + 区分度诊断
+```
+
+三种策略由 `config/default.yaml` 的 `rag.strategy` 决定，也可用环境变量覆盖（`AIMI_RAG__STRATEGY=hybrid`）：
+
+| strategy | 依赖 | 说明 |
+|---|---|---|
+| `bm25` | 无 | **默认**。零依赖、可解释，小语料下的强基线 |
+| `vector` | sentence-transformers | 稠密余弦，擅长字面不匹配 |
+| `hybrid` | sentence-transformers | BM25 + 向量，RRF 融合 |
+
+### 现在的重点：目前还没有真实语义嵌入
+
+`sentence-transformers` 未安装时会自动退化为 **`HashingEmbedder`**（词袋 hashing 投影）。
+它是**管道替身，不是语义模型**——「批处理」和「跑批」在它眼里毫无关系。
+
+> ⚠️ **用替身跑出来的召回率、MRR 一律不得写进简历 / 面经 / 效果表。**
+> `/health` 的 `semantic_retrieval` 字段会如实报告当前是不是替身（现在为 `false`），
+> `scripts/eval_retrieval.py` 也会在报告顶部自动打印警示块。
+
+装好真实模型后无需改代码：
+
+```bash
+pip install sentence-transformers          # 首次运行自动下载 bge-small-zh（约 90MB）
+AIMI_RAG__STRATEGY=hybrid python -m src.cli serve
+```
+
+**换模型后第一件事是重新标定 `rag.min_score`**（默认 0.20）：不同模型的余弦分布差异极大，
+照搬阈值会直接掐掉一部分正确召回——这点在替身身上已经验证过：
+加上阈值后 `vector` 的 Recall@3 从 0.850 掉到 0.783，正是掐过头了。
+
+### 评测怎么用
+
+```bash
+python scripts/eval_retrieval.py            # 三路对比，产出 reports/retrieval_*.md
+python scripts/eval_retrieval.py --embed bge
+```
+
+评测集 `config/retrieval_eval.json` 是**手工标注的 30 条**，
+其中 22 条 `literal`（字面改写）、8 条 `semantic`（语义改写，与原题几乎不共享词面）。
+分两组统计，因为它们的结论完全不同：
+
+| 分组 | BM25 MRR@10 | 含义 |
+|---|---|---|
+| `literal`（n=22） | ≈1.00 | 字面改写题，关键词方法就够 |
+| `semantic`（n=8） | ≈0.44 | **语义改写题基本崩盘——这一组的差距才是换 Vector/Hybrid 的理由** |
+
+> 语料只有 32 条，Recall@k 的绝对值没有参考价值；只看「同一份标注上哪个策略更好」。
+
+### 这一层踩到的两个坑（都能在面试里讲）
+
+1. **小语料的 IDF 会变负数**。教科书公式 `ln((N-df+0.5)/(df+0.5))` 在词出现超过半数文档时为负，
+   于是「包含通用词」反而扣分。改用非负变体 `ln(1 + (N-df+0.5)/(df+0.5))`（Lucene 同款）。
+2. **稠密检索没有「无命中」这个概念**。余弦相似度几乎不会等于 0，再不相干的文档也有 0.15 分，
+   不设 `min_score` 阈值，Agent 就会被一堆垃圾召回带偏。BM25 天然有 >0 语义，不需要这步。
+
+两者都写成了回归测试：`test_bm25_idf_is_non_negative_on_tiny_corpus`
+与 `test_vector_retrieval_requires_similarity_threshold`。
+
 ## 七、下一步（按 6 周计划）
 
-- **W1 Step1**：补一条 `/v1/chat` 非流式 vs `/v1/chat/stream` 的时延对比脚本，出 TTFT / P50 / P95 表 → 填进简历第一条
-- **W2**：自建 RAG（移植 `medical-rag`：切分 → bge-small-zh → FAISS → BM25 → cross-encoder 重排）
-  接到 `search_question_bank` 背后，**工具契约不用改**
-- **W3**：手写 tool-call 循环**已完成一半**——骨架与防御到位，剩：补工具集 + 真实模型上的成功率/完成率实测
-- **W4**：100 条评测集 + LLM-as-judge + 人工校准 → 补上毕设「无法实时评估」的短板
+- **W1 Step1**：时延基准脚本已就位（`scripts/bench.py`），**等真实 Key 跑出 TTFT / P50 / P95** → 填进简历第一条
+- **W2**：检索层已完成（本节）。剩下的活是装 `sentence-transformers` 用真实 bge-small-zh 重跑评测、标定 `min_score`、补 cross-encoder 重排
+- **W3**：手写 tool-call 循环已就位，剩：扩充工具集 + 真实模型上的成功率 / 完成率实测
+- **W4**：评测集从 10 条扩到 100 条 + 人工抽 ≥30 条校准 → 补上毕设「无法实时评估」的短板
 - **W5**：上下文压缩 + Docker + 结构化日志
 - **W6**：开源整理 + 技术博客 + 数字回填简历
 

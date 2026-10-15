@@ -55,6 +55,18 @@ class AgentConfig(BaseModel):
     question_bank: str = "config/question_bank.json"
 
 
+class RagConfig(BaseModel):
+    """检索配置。
+
+    `strategy` 三选一：bm25（零依赖）/ vector / hybrid（后两者需要 sentence-transformers，
+    缺失时自动退化为 HashingEmbedder 替身，并在 /health 与报告里显式标记）。
+    """
+
+    strategy: str = "bm25"
+    embedder: str = "auto"  # auto | hashing | sentence-transformers
+    min_score: float = 0.20  # 稠密检索相似度下限，换真 embedding 后需重新标定
+
+
 class Settings(BaseModel):
     env: str = "dev"
     version: str = "0.1.0"
@@ -64,6 +76,7 @@ class Settings(BaseModel):
     judge: LLMConfig = Field(default_factory=LLMConfig)
     metrics: MetricsConfig = Field(default_factory=MetricsConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig)
+    rag: RagConfig = Field(default_factory=RagConfig)
     prompts_dir: str = "config/prompts"
 
 

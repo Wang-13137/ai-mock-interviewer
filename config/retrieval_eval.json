@@ -1,0 +1,249 @@
+{
+  "version": "0.1-seed",
+  "note": "检索评测集：query -> 应当命中的题目 id。由人工按题库内容逐条标注，不是从 tags 自动生成（自动生成等于让答案泄露进标注，评测会虚高）。语料只有 30 条，绝对值不可用，只能用于同一份标注上的策略间相对比较。",
+  "cases": [
+    {
+      "query": "RAG 重排 消融实验",
+      "relevant": [
+        "proj-02",
+        "llm-01"
+      ],
+      "note": "重排效果怎么证明",
+      "kind": "literal"
+    },
+    {
+      "query": "知识库 chunk 怎么切分 重叠多少",
+      "relevant": [
+        "proj-01"
+      ],
+      "note": "切分策略",
+      "kind": "literal"
+    },
+    {
+      "query": "引用精确率 幻觉 降低编造",
+      "relevant": [
+        "proj-03",
+        "llm-06"
+      ],
+      "note": "幻觉治理",
+      "kind": "literal"
+    },
+    {
+      "query": "McNemar 显著性检验 为什么不用准确率",
+      "relevant": [
+        "proj-04",
+        "data-02"
+      ],
+      "note": "统计检验选择",
+      "kind": "literal"
+    },
+    {
+      "query": "深度学习跑不过传统方法 负结果归因",
+      "relevant": [
+        "proj-05"
+      ],
+      "note": "负结果",
+      "kind": "literal"
+    },
+    {
+      "query": "交叉验证 批次效应 数据泄漏",
+      "relevant": [
+        "proj-06"
+      ],
+      "note": "泄漏诊断",
+      "kind": "literal"
+    },
+    {
+      "query": "质谱 峰 特征筛选 830 到 47",
+      "relevant": [
+        "proj-07"
+      ],
+      "note": "特征工程",
+      "kind": "literal"
+    },
+    {
+      "query": "可解释性 线性探针 遮挡法 置换检验",
+      "relevant": [
+        "proj-08"
+      ],
+      "note": "可解释性一致性",
+      "kind": "literal"
+    },
+    {
+      "query": "自己搭一套 RAG 分几步",
+      "relevant": [
+        "llm-01"
+      ],
+      "note": "RAG 落地路径",
+      "kind": "literal"
+    },
+    {
+      "query": "向量库选型 FAISS Milvus PGVector",
+      "relevant": [
+        "llm-02"
+      ],
+      "note": "选型",
+      "kind": "literal"
+    },
+    {
+      "query": "流式 TTFT 首字延迟 怎么优化",
+      "relevant": [
+        "llm-03"
+      ],
+      "note": "时延",
+      "kind": "literal"
+    },
+    {
+      "query": "Agent 重复调用同一个工具 工程上怎么办",
+      "relevant": [
+        "llm-04"
+      ],
+      "note": "死循环防御",
+      "kind": "literal"
+    },
+    {
+      "query": "多轮上下文太长 压缩 记忆",
+      "relevant": [
+        "llm-05"
+      ],
+      "note": "上下文管理",
+      "kind": "literal"
+    },
+    {
+      "query": "大模型当裁判 打分 校准 一致性",
+      "relevant": [
+        "llm-07"
+      ],
+      "note": "LLM-as-judge",
+      "kind": "literal"
+    },
+    {
+      "query": "Token 成本超标 从哪下手",
+      "relevant": [
+        "llm-08"
+      ],
+      "note": "成本优化",
+      "kind": "literal"
+    },
+    {
+      "query": "多重检验校正 FDR BH Bonferroni",
+      "relevant": [
+        "data-01"
+      ],
+      "note": "多重检验",
+      "kind": "literal"
+    },
+    {
+      "query": "样本极度不平衡 准确率 AUC 不可靠",
+      "relevant": [
+        "data-02"
+      ],
+      "note": "不平衡",
+      "kind": "literal"
+    },
+    {
+      "query": "上线后数据分布漂移 无标注怎么发现",
+      "relevant": [
+        "data-04"
+      ],
+      "note": "分布漂移",
+      "kind": "literal"
+    },
+    {
+      "query": "上游接口超时 429 重试 降级",
+      "relevant": [
+        "eng-03"
+      ],
+      "note": "容错",
+      "kind": "literal"
+    },
+    {
+      "query": "并发跑几百条请求 怎么控制并发度 异步一定更快吗",
+      "relevant": [
+        "eng-04"
+      ],
+      "note": "并发",
+      "kind": "literal"
+    },
+    {
+      "query": "脚本改成 HTTP 服务 接口和错误处理怎么设计",
+      "relevant": [
+        "eng-01"
+      ],
+      "note": "服务化",
+      "kind": "literal"
+    },
+    {
+      "query": "为什么从生物医学工程转做 AI",
+      "relevant": [
+        "beh-02"
+      ],
+      "note": "转行动机",
+      "kind": "literal"
+    },
+    {
+      "query": "模型评分和人工评分差得远，怎么处理",
+      "relevant": [
+        "llm-07"
+      ],
+      "note": "语义改写：裁判一致性",
+      "kind": "semantic"
+    },
+    {
+      "query": "用户抱怨回答半天才出来，从哪查起",
+      "relevant": [
+        "llm-03"
+      ],
+      "note": "语义改写：时延",
+      "kind": "semantic"
+    },
+    {
+      "query": "换一批样本结果就崩了，问题出在哪",
+      "relevant": [
+        "proj-06"
+      ],
+      "note": "语义改写：批次效应",
+      "kind": "semantic"
+    },
+    {
+      "query": "能不能先拿全量数据算好标准化参数再切分",
+      "relevant": [
+        "data-05"
+      ],
+      "note": "语义改写：预处理泄漏",
+      "kind": "semantic"
+    },
+    {
+      "query": "机器人反复执行同一个动作停不下来",
+      "relevant": [
+        "llm-04"
+      ],
+      "note": "语义改写：死循环",
+      "kind": "semantic"
+    },
+    {
+      "query": "聊到后面就把开头说过的内容忘了",
+      "relevant": [
+        "llm-05"
+      ],
+      "note": "语义改写：上下文",
+      "kind": "semantic"
+    },
+    {
+      "query": "月底账单超预算，从哪几个地方省",
+      "relevant": [
+        "llm-08"
+      ],
+      "note": "语义改写：成本",
+      "kind": "semantic"
+    },
+    {
+      "query": "挑了很多变量但模型好像把答案背下来了",
+      "relevant": [
+        "data-03"
+      ],
+      "note": "语义改写：过拟合",
+      "kind": "semantic"
+    }
+  ]
+}

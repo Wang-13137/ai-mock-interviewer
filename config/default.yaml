@@ -43,6 +43,14 @@ agent:
   protocol: handwritten      # 自建结构化协议，不依赖厂商原生 function calling
   question_bank: config/question_bank.json
 
+# 检索策略：bm25（零依赖，默认） / vector / hybrid
+# vector 与 hybrid 需要 sentence-transformers；缺失时会退化为 HashingEmbedder 替身
+# （替身跑出的召回率不得对外引用，/health 会显式标记 semantic_retrieval=false）
+rag:
+  strategy: bm25
+  embedder: auto
+  min_score: 0.20
+
 # System Prompt / rubric / 岗位模板的存放目录（W2 起会往里加文件）
 prompts_dir: config/prompts
 

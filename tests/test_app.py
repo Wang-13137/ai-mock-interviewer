@@ -11,6 +11,20 @@ def test_health(client):
     assert body["ready"] is False
 
 
+def test_health_reports_retrieval_strategy_and_red_line(client):
+    """/health 必须自己说清楚检索是不是替身——这条比写在 README 里可靠。
+
+    外部脚本（评测、CI、上线自检）应当以 `semantic_retrieval` 为准，
+    而不是相信报告里的数字。
+    """
+    body = client.get("/health").json()
+    assert body["retrieval_strategy"], "缺失 retrieval_strategy，外部无法判断链路配置"
+    assert isinstance(body["semantic_retrieval"], bool)
+    if not body["semantic_retrieval"]:
+        # 默认配置跑的是 bm25（零依赖关键词），本来就不是语义检索
+        assert body["retrieval_strategy"] == "bm25"
+
+
 def test_chat_non_stream(client):
     r = client.post(
         "/v1/chat",
