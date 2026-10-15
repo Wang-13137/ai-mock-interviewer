@@ -25,6 +25,17 @@ llm:
   timeout: 30.0
   max_retries: 2
 
+# 评委（LLM-as-judge）：**必须换成与上面不同的模型**，例如生成用 zhipu、裁判用 deepseek
+judge:
+  provider: mock
+  model: ""
+  base_url: ""
+  api_key: ""
+  temperature: 0.0        # 打分要稳定，固定为 0
+  max_tokens: 256
+  timeout: 30.0
+  max_retries: 2
+
 # System Prompt / rubric / 岗位模板的存放目录（W2 起会往里加文件）
 prompts_dir: config/prompts
 

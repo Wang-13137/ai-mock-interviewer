@@ -60,6 +60,25 @@ def cmd_chat(args: argparse.Namespace) -> None:
     asyncio.run(_chat_loop(settings))
 
 
+def cmd_eval(args: argparse.Namespace) -> None:
+    """跑一批评测：生成 -> 裁判打分 -> 与人工标注对齐。"""
+    from src.eval.dataset import load_dataset
+    from src.eval.runner import run_eval, write_report
+
+    overrides: dict = {}
+    if getattr(args, "generator", None):
+        overrides["llm"] = {"provider": args.generator}
+    if getattr(args, "judge", None):
+        overrides["judge"] = {"provider": args.judge}
+    settings = load_settings(**overrides)
+
+    dataset = load_dataset(args.dataset)
+    report = asyncio.run(run_eval(settings, dataset, limit=args.limit, concurrency=args.concurrency))
+    md, js = write_report(report)
+    print("\n" + report.render_md())
+    print(f"\n报告：{md}\n      {js}")
+
+
 def _overrides(args: argparse.Namespace) -> dict:
     out = {}
     if getattr(args, "provider", None):
@@ -81,6 +100,14 @@ def main(argv: Optional[list] = None) -> int:
     p_chat = sub.add_parser("chat", help="终端内直接和面试官对话")
     p_chat.add_argument("--provider", default=None)
     p_chat.set_defaults(func=cmd_chat)
+
+    p_eval = sub.add_parser("eval", help="跑评测集：生成 → 裁判打分 → 一致性统计")
+    p_eval.add_argument("--dataset", default="config/eval_set.example.json")
+    p_eval.add_argument("--generator", default=None, help="生成模型 provider，如 zhipu")
+    p_eval.add_argument("--judge", default=None, help="裁判模型 provider，**应与 generator 不同**")
+    p_eval.add_argument("--limit", type=int, default=None)
+    p_eval.add_argument("--concurrency", type=int, default=4)
+    p_eval.set_defaults(func=cmd_eval)
 
     args = parser.parse_args(argv)
     args.func(args)

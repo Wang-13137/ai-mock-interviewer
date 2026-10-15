@@ -32,18 +32,23 @@ from .schemas.chat import ChatRequest, ChatResponse, HealthResponse, Usage
 log = logging.getLogger("aimi.app")
 
 
-def build_client(settings: Settings) -> BaseLLMClient:
-    """按配置构建 LLM 客户端；条件不满足时降级到离线替身（保证链路永远可跑）。"""
+def build_client(settings: Settings, role: str = "chat") -> BaseLLMClient:
+    """按配置构建 LLM 客户端；条件不满足时降级到离线替身（保证链路永远可跑）。
+
+    role="chat" 用 settings.llm（对话生成），role="judge" 用 settings.judge（评分裁判）。
+    """
+    raw = settings.llm if role == "chat" else settings.judge
     try:
-        llm = resolve_llm(settings.llm)
+        llm = resolve_llm(raw)
     except Exception as exc:  # 配置写错不该让服务起不来
-        log.error("配置解析失败，降级到离线替身：%s", exc)
+        log.error("配置解析失败（role=%s），降级到离线替身：%s", role, exc)
         return EchoClient(model="echo-1")
 
     if not llm.api_key or not llm.base_url or llm.provider == "mock":
         log.warning(
-            "未检测到可用的 LLM 供应商（provider=%s），当前跑在离线替身 EchoClient 上",
-            settings.llm.provider,
+            "未检测到可用的 LLM 供应商（role=%s provider=%s），当前跑在离线替身 EchoClient 上",
+            role,
+            raw.provider,
         )
         return EchoClient(model=llm.model or "echo-1")
 

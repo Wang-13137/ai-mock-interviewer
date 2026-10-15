@@ -7,7 +7,7 @@ venv/
 .env
 .env.local
 
-logs/
+logs/  # 埋点 JSONL，W1 出图表后按需提交
 *.log
 .pytest_cache/
 .ruffcache/

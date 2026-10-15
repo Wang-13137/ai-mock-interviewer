@@ -50,6 +50,8 @@ class Settings(BaseModel):
     version: str = "0.1.0"
     server: ServerConfig = Field(default_factory=ServerConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
+    # 裁判必须用与生成不同的模型，否则是自评偏差
+    judge: LLMConfig = Field(default_factory=LLMConfig)
     metrics: MetricsConfig = Field(default_factory=MetricsConfig)
     prompts_dir: str = "config/prompts"
 

@@ -231,6 +231,39 @@ W1 Step1 拿 P50/P95 就用这个文件，`metrics.percentile()` 已经写好了
 
 ---
 
+## 六之二、评测体系（W4 地基，已就位）
+
+这是**面试价值最高的一步**——论文第 39 页自陈「不能实时对面试结果进行分析」，这里正好把短板补上。
+
+代码在 `src/eval/`，四个模块：
+
+| 模块 | 职责 |
+| --- | --- |
+| `dataset.py` | 评测集契约：`EvalCase`（多轮对话 / 维度 / 参考要点 / 是否应拒答 / 人工分） |
+| `judge.py` | LLM-as-judge：rubric 提示词 + JSON 输出解析（容忍代码块、前后废话） |
+| `stats.py` | 严格一致率 / acc±1 / **Cohen's kappa** / **二次加权 kappa (QWK)** |
+| `runner.py` | 跑批：生成 → 打分 → 一致性 → 出 Markdown 报告 |
+
+跑一批：
+
+```bash
+python -m src.cli eval \
+  --dataset config/eval_set.example.json \
+  --generator zhipu --judge deepseek     # 裁判必须换成不同厂商
+```
+
+五个评测维度：**追问合理性 / 上下文一致性 / 事实可靠性 / 面试风格符合度 / 应拒答场景**。
+样例 10 条在 `config/eval_set.example.json`，W4 的目标是把它填到 **100 条**。
+
+三条已经写进代码的红线：
+
+1. **裁判必须与生成不同模型**，同 provider 时报告自动打印自评偏差警告；
+2. 评分是**有序等级**，所以主指标用 QWK（1 vs 5 的错远比 1 vs 2 严重），kappa 只作参考；
+3. 小样本下 kappa 会失真（kappa paradox），报告同时给出 acc / acc±1 / QWK / 均值差，**不允许只报一个数**。
+
+> 与 `medical-rag` 是同一套方法论（自建评测集 + 双盲对照 + 显著性检验），
+> 但**用例与数据不许复用**——借的是方法，不是材料。
+
 ## 七、下一步（按 6 周计划）
 
 - **W1 Step1**：补一条 `/v1/chat` 非流式 vs `/v1/chat/stream` 的时延对比脚本，出 TTFT / P50 / P95 表 → 填进简历第一条
