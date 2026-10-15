@@ -97,6 +97,22 @@ python -m src.cli chat
 
 ---
 
+## 三之二、本地验证记录（tag `v0.1-service`）
+
+在本机 Python 3.13 + Windows 上实跑通过，**没有使用任何 API Key**（全部跑在离线替身 `EchoClient` 上）：
+
+```
+pytest -q                         -> 32 passed
+GET  /health                      -> {"provider":"mock","model":"echo-1","ready":false}
+POST /v1/chat                     -> 200，带 trace_id 与 usage
+POST /v1/chat/stream              -> 200 text/event-stream，28 个 SSE 帧，末帧含 ttft_ms=0.32
+python -m src.cli chat            -> 终端多轮对话可用
+logs/metrics.jsonl                -> 每次调用一行，含 ttft_ms / total_ms / token / turn
+```
+
+> 注意：上述延迟是**离线替身**的数据，只用于验证链路，**不能写进简历**。
+> 真实时延要等你填了 Key 之后再跑一次才有意义。
+
 ## 四、接口怎么用
 
 **健康检查**
