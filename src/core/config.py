@@ -70,6 +70,9 @@ class RagConfig(BaseModel):
     # 0.30–0.45 是指标平台区（Recall@3=0.933 / MRR@10=0.908），取上沿增强垃圾过滤；
     # 0.50 起 semantic 子集 MRR 从 0.656 跌到 0.469。换模型/扩语料后重跑 scripts/calibrate_min_score.py
     min_score: float = 0.45
+    # cross-encoder 精排：none（默认关闭，粗排够用且零开销）| cross-encoder（需本地权重）
+    rerank: str = "none"
+    reranker_model: str = "BAAI/bge-reranker-base"
 
 
 class Settings(BaseModel):

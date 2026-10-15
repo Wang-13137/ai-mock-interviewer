@@ -259,6 +259,8 @@ async def build_client(args: argparse.Namespace):
             embedder_name=settings.rag.embedder,
             model_name=settings.rag.model_name,
             min_score=settings.rag.min_score,
+            reranker_name=settings.rag.rerank,
+            reranker_model=settings.rag.reranker_model,
         )
         app.state.retriever = app.state.registry.retriever
 

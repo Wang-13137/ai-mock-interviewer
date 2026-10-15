@@ -67,6 +67,11 @@ def main() -> int:
         default="BAAI/bge-small-zh-v1.5",
         help="embedding 模型（Hub id 或本地路径；Hub id 优先解析 models/ 本地镜像）",
     )
+    ap.add_argument(
+        "--rerank",
+        default="none",
+        help="none | cross-encoder（对粗召回候选池做 cross-encoder 精排）",
+    )
     ap.add_argument("--tag", default="retrieval")
     args = ap.parse_args()
 
@@ -81,14 +86,19 @@ def main() -> int:
     for raw in [s.strip() for s in args.strategies.split(",") if s.strip()]:
         strategy = Strategy(raw)
         retriever = Retriever.from_bank(
-            bank, strategy=strategy, embedder_name=args.embed, model_name=args.model
+            bank,
+            strategy=strategy,
+            embedder_name=args.embed,
+            model_name=args.model,
+            reranker_name=args.rerank,
         )
         reports.append(evaluate(retriever, cases, KS))
         meta = retriever.describe()
         print(
             f"  {strategy.value:<7} Recall@3={reports[-1]['recall@3']:.3f} "
             f"MRR@10={reports[-1]['mrr@10']:.3f} Hit@1={reports[-1]['hit@1']:.3f} "
-            f"embedder={meta['embedder'] or '—'} semantic={meta['semantic_embedding']}"
+            f"embedder={meta['embedder'] or '—'} semantic={meta['semantic_embedding']} "
+            f"reranker={meta['reranker']}"
         )
 
     tainted = [r for r in reports if not r["semantic"] and r["strategy"] in ("vector", "hybrid")]

@@ -58,6 +58,8 @@ async def _agent_loop(settings) -> None:
             embedder_name=settings.rag.embedder,
             model_name=settings.rag.model_name,
             min_score=settings.rag.min_score,
+            reranker_name=settings.rag.rerank,
+            reranker_model=settings.rag.reranker_model,
         )
     loop = AgentLoop(client, registry, store, bank, max_steps=settings.agent.max_steps)
 

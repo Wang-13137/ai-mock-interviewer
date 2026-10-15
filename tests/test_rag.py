@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from src.agent.tools import ToolContext, ToolRegistry, ToolSpec, build_default_registry, load_question_bank
-from src.rag.bm25 import BM25Index
+from src.rag.bm25 import BM25Index, Hit
 from src.rag.corpus import Chunk, Corpus, build_corpus
 from src.rag.evaluate import discriminative_power, evaluate, recall_at_k, reciprocal_rank
 from src.rag.fusion import reciprocal_rank_fusion
@@ -295,3 +295,50 @@ def test_unknown_embedder_name_is_rejected(bank):
     """bm25 不需要 embedder，所以只有 vector/hybrid 才会去解析 embedder 名字。"""
     with pytest.raises(ValueError):
         Retriever.from_bank(bank, strategy=Strategy.VECTOR, embedder_name="nope")
+
+
+# --------------------------------------------------------------------------- #
+# 七、重排（cross-encoder）
+# --------------------------------------------------------------------------- #
+def test_noop_reranker_preserves_order(corpus):
+    from src.rag.rerank import NoopReranker
+
+    hits = [Hit("a", 0.1), Hit("b", 0.9)]
+    out = NoopReranker().rerank("q", corpus, hits)
+    assert [h.chunk_id for h in out] == ["a", "b"]
+
+
+def test_reranker_reorders_candidates(corpus):
+    """假 reranker：强制把粗排最后一名提到最前，验证重排真的生效。"""
+    from src.rag.rerank import Reranker
+
+    class Flipper:
+        name = "flipper"
+        semantic = False
+
+        def rerank(self, query, corpus, hits):
+            return [Hit(h.chunk_id, float(i)) for i, h in enumerate(reversed(hits))]
+
+    r = Retriever(corpus, strategy=Strategy.BM25, reranker=Flipper())
+    base = Retriever(corpus, strategy=Strategy.BM25)
+    q = "怎么优化"  # BM25 候选池 >=9 条的查询，翻转后 top-3 必然变化
+    pool = [h.chunk_id for h in base._rank(q, 9, ())]  # 粗排候选池（top_k*3）
+    base_ids = [h.chunk.id for h in base.search(q, top_k=3)]
+    flip_ids = [h.chunk.id for h in r.search(q, top_k=3)]
+    assert base_ids != flip_ids  # 顺序必须被重排改变
+    assert flip_ids == pool[::-1][:3]  # 重排后取 top-3 = 候选池反转的前 3 名
+    assert set(flip_ids) <= set(pool)  # 重排不引入候选池之外的新条目
+
+
+def test_unknown_reranker_name_is_rejected(bank):
+    from src.rag.rerank import build_reranker
+
+    with pytest.raises(ValueError):
+        build_reranker("nope")
+
+
+def test_describe_reports_reranker(corpus):
+    r = Retriever(corpus, strategy=Strategy.BM25)
+    meta = r.describe()
+    assert meta["reranker"] == "noop"
+    assert meta["semantic_reranker"] is False

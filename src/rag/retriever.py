@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from .bm25 import BM25Index, Hit
 from .corpus import Chunk, Corpus, build_corpus
 from .fusion import reciprocal_rank_fusion
+from .rerank import NoopReranker, Reranker
 from .tokenize import tokenize
 from .vector import Embedder, VectorIndex, build_embedder, has_sentence_transformers
 
@@ -57,6 +58,7 @@ class Retriever:
         strategy: Strategy | str = Strategy.BM25,
         embedder: Optional[Embedder] = None,
         min_score: Optional[float] = None,
+        reranker: Optional[Reranker] = None,
     ) -> None:
         if not len(corpus):
             raise ValueError("语料为空，无法建立检索器")
@@ -64,6 +66,8 @@ class Retriever:
         self.strategy = Strategy(strategy)
         self.bm25 = BM25Index(corpus)
         self.vector: Optional[VectorIndex] = None
+        # cross-encoder 只对粗召回的候选池（top_k*3）精排，开销可控
+        self.reranker: Reranker = reranker or NoopReranker()
 
         # 稠密检索必须配相似度阈值（理由见 VectorIndex.search）。
         # 0.20 是先用替身 embedding 定下的起点，**换真 embedding 后必须用评测集重新标定**。
@@ -87,14 +91,19 @@ class Retriever:
         embedder_name: str = "auto",
         model_name: str = "BAAI/bge-small-zh-v1.5",
         min_score: Optional[float] = None,
+        reranker_name: str = "none",
+        reranker_model: str = "BAAI/bge-reranker-base",
     ) -> "Retriever":
+        from .rerank import build_reranker  # 延迟导入，避免循环
+
         corpus = build_corpus(bank)
         emb = (
             build_embedder(embedder_name, model_name)
             if Strategy(strategy) != Strategy.BM25
             else None
         )
-        return cls(corpus, strategy=strategy, embedder=emb, min_score=min_score)
+        reranker = build_reranker(reranker_name, reranker_model)
+        return cls(corpus, strategy=strategy, embedder=emb, min_score=min_score, reranker=reranker)
 
     # ---------------- 检索 ---------------- #
     def search(
@@ -104,6 +113,8 @@ class Retriever:
         boost_dimensions: Sequence[str] = (),
     ) -> List[Retrieved]:
         hits = self._rank(query, top_k * 3, boost_dimensions)
+        if self.reranker.name != "noop":
+            hits = self.reranker.rerank(query, self.corpus, hits)
         hits = hits[: max(1, top_k)]
         return [
             Retrieved(chunk=self.corpus.by_id[h.chunk_id], score=h.score, strategy=self.strategy.value)
@@ -138,6 +149,8 @@ class Retriever:
             "documents": len(self.corpus),
             "semantic_embedding": bool(self.vector and getattr(self.embedder, "semantic", False)),
             "embedder": getattr(self.embedder, "name", None),
+            "reranker": self.reranker.name,
+            "semantic_reranker": bool(getattr(self.reranker, "semantic", False)),
         }
 
 

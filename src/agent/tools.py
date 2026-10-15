@@ -270,6 +270,8 @@ def build_default_registry(
     embedder_name: str = "auto",
     model_name: str = "BAAI/bge-small-zh-v1.5",
     min_score: Optional[float] = None,
+    reranker_name: str = "none",
+    reranker_model: str = "BAAI/bge-reranker-base",
 ) -> ToolRegistry:
     """默认工具集。`session_id` 由执行层注入 arguments，工具函数本身不必感知 HTTP 层。
 
@@ -285,6 +287,8 @@ def build_default_registry(
                 embedder_name=embedder_name,
                 model_name=model_name,
                 min_score=min_score,
+                reranker_name=reranker_name,
+                reranker_model=reranker_model,
             )
         except Exception as exc:  # 检索器建不起来不该让服务起不来
             log.warning("检索器构建失败，回退到即时构建：%s", exc)
