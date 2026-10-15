@@ -64,7 +64,12 @@ class RagConfig(BaseModel):
 
     strategy: str = "bm25"
     embedder: str = "auto"  # auto | hashing | sentence-transformers
-    min_score: float = 0.20  # 稠密检索相似度下限，换真 embedding 后需重新标定
+    # Hub id 或本地路径；Hub id 会优先解析为 models/<basename> 本地镜像（见 vector._resolve_model_ref）
+    model_name: str = "BAAI/bge-small-zh-v1.5"
+    # 已用 bge-small-zh-v1.5 在 30 条评测集上标定（2026-10-16）：
+    # 0.30–0.45 是指标平台区（Recall@3=0.933 / MRR@10=0.908），取上沿增强垃圾过滤；
+    # 0.50 起 semantic 子集 MRR 从 0.656 跌到 0.469。换模型/扩语料后重跑 scripts/calibrate_min_score.py
+    min_score: float = 0.45
 
 
 class Settings(BaseModel):

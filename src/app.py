@@ -92,6 +92,8 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
                     app.state.bank,
                     strategy=cfg.rag.strategy,
                     embedder_name=cfg.rag.embedder,
+                    model_name=cfg.rag.model_name,
+                    min_score=cfg.rag.min_score,
                 )
                 app.state.retriever = app.state.registry.retriever
             except Exception as exc:

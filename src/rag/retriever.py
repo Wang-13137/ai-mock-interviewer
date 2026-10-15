@@ -30,10 +30,11 @@ log = logging.getLogger("aimi.rag.retriever")
 
 BOOST_FACTOR = 1.3
 
-# 稠密检索的相似度下限。**这个值是用 HashingEmbedder 定的起点，
-# 换成真实语义模型（bge-small-zh）后必须用评测集重新标定**——
+# 稠密检索的相似度下限。已用 bge-small-zh-v1.5 在 30 条评测集上标定（2026-10-16）：
+# 0.30–0.45 指标平台区取上沿 0.45；0.50 起 semantic 子集 MRR 明显下跌。
+# **换模型或扩语料后必须重跑 scripts/calibrate_min_score.py 重新标定**——
 # 不同模型的余弦分布差异极大，照搬阈值会直接掐掉一半召回。
-DEFAULT_MIN_SCORE = 0.20
+DEFAULT_MIN_SCORE = 0.45
 
 
 class Strategy(str, Enum):
@@ -84,10 +85,16 @@ class Retriever:
         bank: Dict[str, Any],
         strategy: Strategy | str = Strategy.BM25,
         embedder_name: str = "auto",
+        model_name: str = "BAAI/bge-small-zh-v1.5",
+        min_score: Optional[float] = None,
     ) -> "Retriever":
         corpus = build_corpus(bank)
-        emb = build_embedder(embedder_name) if Strategy(strategy) != Strategy.BM25 else None
-        return cls(corpus, strategy=strategy, embedder=emb)
+        emb = (
+            build_embedder(embedder_name, model_name)
+            if Strategy(strategy) != Strategy.BM25
+            else None
+        )
+        return cls(corpus, strategy=strategy, embedder=emb, min_score=min_score)
 
     # ---------------- 检索 ---------------- #
     def search(

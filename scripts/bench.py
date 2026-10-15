@@ -254,7 +254,11 @@ async def build_client(args: argparse.Namespace):
         app.state.store = SessionStore()
         app.state.bank = load_question_bank(settings.agent.question_bank)
         app.state.registry = build_default_registry(
-            app.state.bank, strategy=settings.rag.strategy, embedder_name=settings.rag.embedder
+            app.state.bank,
+            strategy=settings.rag.strategy,
+            embedder_name=settings.rag.embedder,
+            model_name=settings.rag.model_name,
+            min_score=settings.rag.min_score,
         )
         app.state.retriever = app.state.registry.retriever
 

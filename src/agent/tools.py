@@ -268,6 +268,8 @@ def build_default_registry(
     bank: Optional[Dict[str, Any]] = None,
     strategy: Strategy | str = Strategy.BM25,
     embedder_name: str = "auto",
+    model_name: str = "BAAI/bge-small-zh-v1.5",
+    min_score: Optional[float] = None,
 ) -> ToolRegistry:
     """默认工具集。`session_id` 由执行层注入 arguments，工具函数本身不必感知 HTTP 层。
 
@@ -277,7 +279,13 @@ def build_default_registry(
     reg = ToolRegistry()
     if bank:
         try:
-            reg.retriever = Retriever.from_bank(bank, strategy=strategy, embedder_name=embedder_name)
+            reg.retriever = Retriever.from_bank(
+                bank,
+                strategy=strategy,
+                embedder_name=embedder_name,
+                model_name=model_name,
+                min_score=min_score,
+            )
         except Exception as exc:  # 检索器建不起来不该让服务起不来
             log.warning("检索器构建失败，回退到即时构建：%s", exc)
             reg.retriever = None

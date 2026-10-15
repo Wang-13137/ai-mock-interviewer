@@ -53,7 +53,11 @@ async def _agent_loop(settings) -> None:
     registry = None
     if settings.agent.enabled:
         registry = build_default_registry(
-            bank, strategy=settings.rag.strategy, embedder_name=settings.rag.embedder
+            bank,
+            strategy=settings.rag.strategy,
+            embedder_name=settings.rag.embedder,
+            model_name=settings.rag.model_name,
+            min_score=settings.rag.min_score,
         )
     loop = AgentLoop(client, registry, store, bank, max_steps=settings.agent.max_steps)
 

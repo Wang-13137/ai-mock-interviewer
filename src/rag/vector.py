@@ -81,7 +81,11 @@ class SentenceTransformerEmbedder:
 
         self.name = model_name
         self._model = SentenceTransformer(model_name)
-        self.dim = int(self._model.get_sentence_embedding_dimension())
+        # ST>=6 改名为 get_embedding_dimension，旧版为 get_sentence_embedding_dimension
+        getter = getattr(
+            self._model, "get_embedding_dimension", None
+        ) or self._model.get_sentence_embedding_dimension
+        self.dim = int(getter())
 
     def embed(self, texts: Sequence[str]) -> List[List[float]]:
         out = self._model.encode(
@@ -143,13 +147,30 @@ class VectorIndex:
         return hits[: max(1, top_k)]
 
 
+def _resolve_model_ref(model: str) -> str:
+    """Hub id（如 BAAI/bge-small-zh-v1.5）优先解析为仓库内本地镜像 models/<basename>。
+
+    原因：本机经代理访问 HuggingFace/hf-mirror 不稳定（502），权重从 ModelScope
+    手动拉到 models/ 下；优先本地路径让离线/CI 环境可复现。本地不存在时回退 Hub id，
+    由 sentence-transformers 自行联网下载。
+    """
+    from pathlib import Path  # noqa: PLC0415
+
+    if "/" in model and not Path(model).exists():
+        local = Path(__file__).resolve().parents[2] / "models" / model.rsplit("/", 1)[-1]
+        if (local / "config.json").exists():
+            log.info("使用本地模型镜像: %s", local)
+            return str(local)
+    return model
+
+
 def build_embedder(name: str = "auto", model: str = "BAAI/bge-small-zh-v1.5") -> Embedder:
     """按名字构建 embedder。`auto`：有 sentence-transformers 就用，否则退化为替身并记录警告。"""
     if name == "hashing":
         return HashingEmbedder()
     if name in ("auto", "sentence-transformers", "bge"):
         if has_sentence_transformers():
-            return SentenceTransformerEmbedder(model)
+            return SentenceTransformerEmbedder(_resolve_model_ref(model))
         if name != "auto":
             raise RuntimeError("要求使用 sentence-transformers，但本机未安装")
         log.warning("未检测到 sentence-transformers，退回 HashingEmbedder（替身，不得用于效果报告）")

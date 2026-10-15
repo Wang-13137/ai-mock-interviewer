@@ -62,6 +62,11 @@ def main() -> int:
         default="auto",
         help="auto | hashing | sentence-transformers（auto：有库就用，没有就用替身）",
     )
+    ap.add_argument(
+        "--model",
+        default="BAAI/bge-small-zh-v1.5",
+        help="embedding 模型（Hub id 或本地路径；Hub id 优先解析 models/ 本地镜像）",
+    )
     ap.add_argument("--tag", default="retrieval")
     args = ap.parse_args()
 
@@ -75,7 +80,9 @@ def main() -> int:
     reports = []
     for raw in [s.strip() for s in args.strategies.split(",") if s.strip()]:
         strategy = Strategy(raw)
-        retriever = Retriever.from_bank(bank, strategy=strategy, embedder_name=args.embed)
+        retriever = Retriever.from_bank(
+            bank, strategy=strategy, embedder_name=args.embed, model_name=args.model
+        )
         reports.append(evaluate(retriever, cases, KS))
         meta = retriever.describe()
         print(
