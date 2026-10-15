@@ -113,6 +113,39 @@ logs/metrics.jsonl                -> 每次调用一行，含 ttft_ms / total_ms
 > 注意：上述延迟是**离线替身**的数据，只用于验证链路，**不能写进简历**。
 > 真实时延要等你填了 Key 之后再跑一次才有意义。
 
+## 三之三、跑时延基准（W1 Step1）
+
+W1 的后半件事是「非流式 vs 流式」的时延对比表，**那张表是简历第一条两组数字的唯一来源**。
+脚本已就位（`scripts/bench.py`），12 条应届 AI 应用工程师模拟面试问题在 `config/bench_questions.json`。
+
+```bash
+# 1) 起服务（用真实模型）
+export AIMI_LLM__PROVIDER=zhipu && export ZHIPU_API_KEY=你的key
+python -m src.cli serve
+
+# 2) 另一个终端跑基准（≥30 次再看 P95 才有意义）
+python scripts/bench.py --repeat 30 --concurrency 1 --tag glm4flash
+```
+
+产出 `reports/bench_<tag>_<ts>.md`（Markdown 表）与同名 `.json`（含每条原始记录）。样例：
+
+| 链路 | 样本 | 客户端 TTFT P50 | TTFT P95 | 端到端 P50 | 端到端 P95 | 平均字数 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 非流式 `/v1/chat` | n | — | — | … | … | … |
+| 流式 `/v1/chat/stream` | n | … | … | … | … | … |
+
+防呆设计：
+
+- `health.ready=false`（离线替身）时，报告顶部自动打出 **MOCK 警示**——替身数字一律不得外引；
+- `reports/` 已进 `.gitignore`，mock 产物不会误提交；
+- 脚本自带 `--no-warmup` 开关：默认丢弃首次冷启动调用，避免把连接/模型预热算进 P95。
+
+只验证脚本本身（不需要服务进程、不需要 Key）：
+
+```bash
+python scripts/bench.py --inline --repeat 2 --tag smoke
+```
+
 ## 四、接口怎么用
 
 **健康检查**

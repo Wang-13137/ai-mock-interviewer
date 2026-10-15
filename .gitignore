@@ -16,3 +16,6 @@ logs/
 data/
 index/
 storage/
+
+# 基准报告产物（含 mock 数据，避免误提交到公开仓库）
+reports/
