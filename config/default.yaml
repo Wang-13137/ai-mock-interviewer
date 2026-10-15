@@ -1,0 +1,33 @@
+# AI 模拟面试官 —— 集中配置
+# 优先级：环境变量 > 本文件
+# 环境变量写法：AIMI_ 前缀 + 双下划线分层，如 AIMI_LLM__PROVIDER=zhipu
+
+env: dev
+
+server:
+  host: 127.0.0.1
+  port: 8000
+
+llm:
+  # mock = 离线替身（无需 Key，用于跑通链路与跑测试）
+  # 拿到 Key 后改成 zhipu / siliconflow / deepseek / openai
+  provider: mock
+
+  # 留空则使用该厂商的预设模型，见 core/config.py 的 PROVIDER_PRESETS
+  model: ""
+  base_url: ""
+
+  # 强烈建议留空：Key 走环境变量，不进 Git
+  api_key: ""
+
+  temperature: 0.7
+  max_tokens: 1024
+  timeout: 30.0
+  max_retries: 2
+
+# System Prompt / rubric / 岗位模板的存放目录（W2 起会往里加文件）
+prompts_dir: config/prompts
+
+metrics:
+  enabled: true
+  path: logs/metrics.jsonl
