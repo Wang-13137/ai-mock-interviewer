@@ -31,11 +31,11 @@ log = logging.getLogger("aimi.rag.retriever")
 
 BOOST_FACTOR = 1.3
 
-# 稠密检索的相似度下限。已用 bge-small-zh-v1.5 在 30 条评测集上标定（2026-10-16）：
-# 0.30–0.45 指标平台区取上沿 0.45；0.50 起 semantic 子集 MRR 明显下跌。
-# **换模型或扩语料后必须重跑 scripts/calibrate_min_score.py 重新标定**——
-# 不同模型的余弦分布差异极大，照搬阈值会直接掐掉一半召回。
-DEFAULT_MIN_SCORE = 0.45
+# 稠密检索的相似度下限。用 bge-small-zh-v1.5 在 80 语料 × 60 条评测集上标定（2026-10-16 二轮）：
+# 平台区 0.30–0.40，取上沿 0.40；0.45 起缓慢下滑，0.60 崩。
+# **换模型、扩语料或扩评测集后必须重跑 scripts/calibrate_min_score.py 重新标定**——
+# 不同模型/数据分布下照搬阈值会直接掐掉一半召回。
+DEFAULT_MIN_SCORE = 0.40
 
 
 class Strategy(str, Enum):

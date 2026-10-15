@@ -66,10 +66,10 @@ class RagConfig(BaseModel):
     embedder: str = "auto"  # auto | hashing | sentence-transformers
     # Hub id 或本地路径；Hub id 会优先解析为 models/<basename> 本地镜像（见 vector._resolve_model_ref）
     model_name: str = "BAAI/bge-small-zh-v1.5"
-    # 已用 bge-small-zh-v1.5 在 30 条评测集上标定（2026-10-16）：
-    # 0.30–0.45 是指标平台区（Recall@3=0.933 / MRR@10=0.908），取上沿增强垃圾过滤；
-    # 0.50 起 semantic 子集 MRR 从 0.656 跌到 0.469。换模型/扩语料后重跑 scripts/calibrate_min_score.py
-    min_score: float = 0.45
+    # 用 bge-small-zh-v1.5 在 80 语料 × 60 条评测集上标定（2026-10-16 二轮）：
+    # 平台区 0.30–0.40（Recall@3=0.800 / MRR@10=0.817 / semantic 子集 0.634），取上沿 0.40；
+    # 0.45 起缓慢下滑，0.60 崩（semantic 0.408）。换模型/扩语料后重跑 scripts/calibrate_min_score.py
+    min_score: float = 0.40
     # cross-encoder 精排：none（默认关闭，粗排够用且零开销）| cross-encoder（需本地权重）
     rerank: str = "none"
     reranker_model: str = "BAAI/bge-reranker-base"
