@@ -45,6 +45,16 @@ class MetricsConfig(BaseModel):
     path: str = "logs/metrics.jsonl"
 
 
+class AgentConfig(BaseModel):
+    """工具调用（Agent Loop）相关配置。"""
+
+    enabled: bool = True
+    max_steps: int = 3
+    # 手写协议 vs 厂商原生 tools 参数。W3 阶段只有 handwritten 实现
+    protocol: str = "handwritten"
+    question_bank: str = "config/question_bank.json"
+
+
 class Settings(BaseModel):
     env: str = "dev"
     version: str = "0.1.0"
@@ -53,6 +63,7 @@ class Settings(BaseModel):
     # 裁判必须用与生成不同的模型，否则是自评偏差
     judge: LLMConfig = Field(default_factory=LLMConfig)
     metrics: MetricsConfig = Field(default_factory=MetricsConfig)
+    agent: AgentConfig = Field(default_factory=AgentConfig)
     prompts_dir: str = "config/prompts"
 
 

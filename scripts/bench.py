@@ -238,6 +238,8 @@ async def build_client(args: argparse.Namespace):
     """返回 (client, target描述, provider, model, ready)。"""
     if args.inline:
         # 进程内直连：不触发 uvicorn/lifespan，手动装配依赖（tests 里已覆盖 lifespan 本身）
+        from src.agent.state import SessionStore
+        from src.agent.tools import build_default_registry, load_question_bank
         from src.app import build_client as build_llm_client, create_app
         from src.core.config import load_settings
         from src.metrics import JsonlSink
@@ -248,6 +250,10 @@ async def build_client(args: argparse.Namespace):
         app.state.settings = settings
         app.state.client = build_llm_client(settings)
         app.state.sink = JsonlSink(settings.metrics.path, enabled=False)
+        # lifespan 不会触发（ASGITransport 不调 lifespan），手工补齐 Agent 依赖
+        app.state.store = SessionStore()
+        app.state.bank = load_question_bank(settings.agent.question_bank)
+        app.state.registry = build_default_registry()
 
         client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://inline")
         health = (await client.get("/health")).json()

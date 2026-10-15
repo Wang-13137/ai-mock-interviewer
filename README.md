@@ -264,11 +264,47 @@ python -m src.cli eval \
 > 与 `medical-rag` 是同一套方法论（自建评测集 + 双盲对照 + 显著性检验），
 > 但**用例与数据不许复用**——借的是方法，不是材料。
 
+## 六之三、Agent：手写 tool-call 循环（W3 地基，已就位）
+
+面试 Agent 和普通 chatbot 的分界线是**有状态 + 能调用工具**。代码在 `src/agent/`：
+
+| 模块 | 职责 |
+| --- | --- |
+| `protocol.py` | 输出协议与解析：```tool 代码块 → `ToolCall`；宽松解析 + 坏格式回喂模型自纠 |
+| `tools.py` | 工具注册表 + 参数校验 + 四个种子工具；错误信息刻意写成「可执行」的 |
+| `state.py` | 会话状态：已覆盖维度、要点、轮次（进程内内存，接口按 Redis 预留） |
+| `loop.py` | 手写 ReAct 循环：步数预算 / 死循环检测 / 工具异常不外溢 + `summarize_runs` |
+
+四个种子工具：`search_question_bank`（检索，**W2 换向量检索时契约不变**）、
+`get_interview_progress`、`save_candidate_note`、`finish_interview`。
+题库 30 条在 `config/question_bank.json`。
+
+```bash
+python -m src.cli agent          # 终端对话，每步工具调用都会打印出来
+GET  /v1/tools                   # 工具清单（含参数 JSON Schema）
+POST /v1/chat/agent              # 带工具的对话，响应里带完整 trace
+```
+
+三个防御（每个真实 Agent 都得有，也顺带产出可统计字段）：
+
+1. **步数预算**：`max_steps` 是允许的**工具次数**，产出自然语言终答的那一轮不占预算；
+   超预算后追加一条「禁止再调工具」的指令再问一次（`stopped=max_steps_recovered`）
+2. **死循环检测**：同名+同参数二次出现即警告，第三次强制收敛（`stopped=loop_guard`），
+   且**不会**把模型的工具代码块原样吐给候选人
+3. **工具异常不外溢**：未知工具 / 缺参 / 参数越界都转成 `ok=False` 的 observation 回喂模型自纠
+
+可统计字段（由 `summarize_runs` 汇总，就是 W3 要往简历里填的那组数字）：
+**工具调用成功率 / 完成率 / 平均模型调用次数 / 平均步数 / 停止原因分布**。
+
+> ⚠️ 本机跑在离线替身上：进程一起、接口连通都已验证，但**工具是被脚本喂出来的，不是模型自己决定的**。
+> 换成真实模型之前，成功率 / 完成率 / 步数这些数字只代表「机制生效」，**一律不得写进简历或任何对外材料**。
+
 ## 七、下一步（按 6 周计划）
 
 - **W1 Step1**：补一条 `/v1/chat` 非流式 vs `/v1/chat/stream` 的时延对比脚本，出 TTFT / P50 / P95 表 → 填进简历第一条
 - **W2**：自建 RAG（移植 `medical-rag`：切分 → bge-small-zh → FAISS → BM25 → cross-encoder 重排）
-- **W3**：手写 tool-call 循环做 Agent（题库检索 / 评分规则 / 追问策略）
+  接到 `search_question_bank` 背后，**工具契约不用改**
+- **W3**：手写 tool-call 循环**已完成一半**——骨架与防御到位，剩：补工具集 + 真实模型上的成功率/完成率实测
 - **W4**：100 条评测集 + LLM-as-judge + 人工校准 → 补上毕设「无法实时评估」的短板
 - **W5**：上下文压缩 + Docker + 结构化日志
 - **W6**：开源整理 + 技术博客 + 数字回填简历

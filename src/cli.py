@@ -41,6 +41,50 @@ async def _chat_loop(settings) -> None:
         await client.aclose()
 
 
+async def _agent_loop(settings) -> None:
+    """带工具的对话：把每一步工具调用打印出来，肉眼就能验收 loop 是否收敛。"""
+    from src.agent.loop import AgentLoop
+    from src.agent.state import SessionStore
+    from src.agent.tools import build_default_registry, load_question_bank
+
+    client = build_client(settings)
+    store = SessionStore()
+    bank = load_question_bank(settings.agent.question_bank)
+    registry = build_default_registry() if settings.agent.enabled else None
+    loop = AgentLoop(client, registry, store, bank, max_steps=settings.agent.max_steps)
+
+    print(f"[provider={client.provider_name} model={client.model} ready={client.ready}]")
+    print(f"[tools={','.join(registry.names()) if registry else '无'} max_steps={settings.agent.max_steps}]")
+    print("输入内容后回车即投递；输入 exit / 直接回车退出。\n")
+
+    history: list = []
+    profile = {"position": "AI 应用工程师", "level": "校招应届", "style": "专业严谨"}
+    session_id = "cli-session"
+    try:
+        while True:
+            user = input("你 > ").strip()
+            if not user or user.lower() in {"exit", "quit"}:
+                break
+            history.append({"role": "user", "content": user})
+
+            run = await loop.run(history, profile, session_id=session_id)
+            for st in run.steps:
+                if st.kind in ("tool_call", "tool_result", "parse_error", "loop_guard"):
+                    mark = "OK " if st.ok else "ERR"
+                    detail = st.tool_name or st.content[:40]
+                    print(f"   · [{mark}] {st.kind:<12} {detail}")
+            print(f"\n面试官 > {run.reply}")
+            print(f"   · {run.model_calls} 次模型调用 / {run.tool_calls} 次工具 / stopped={run.stopped}\n")
+            history.append({"role": "assistant", "content": run.reply})
+    finally:
+        await client.aclose()
+
+
+def cmd_agent(args: argparse.Namespace) -> None:
+    settings = load_settings(**_overrides(args))
+    asyncio.run(_agent_loop(settings))
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
     import uvicorn
 
@@ -97,9 +141,13 @@ def main(argv: Optional[list] = None) -> int:
     p_serve.add_argument("--provider", default=None, help="覆盖 llm.provider，如 zhipu / deepseek")
     p_serve.set_defaults(func=cmd_serve)
 
-    p_chat = sub.add_parser("chat", help="终端内直接和面试官对话")
+    p_chat = sub.add_parser("chat", help="终端内直接和面试官对话（不带工具）")
     p_chat.add_argument("--provider", default=None)
     p_chat.set_defaults(func=cmd_chat)
+
+    p_agent = sub.add_parser("agent", help="终端对话 + 工具调用，并打印每步 trace")
+    p_agent.add_argument("--provider", default=None)
+    p_agent.set_defaults(func=cmd_agent)
 
     p_eval = sub.add_parser("eval", help="跑评测集：生成 → 裁判打分 → 一致性统计")
     p_eval.add_argument("--dataset", default="config/eval_set.example.json")

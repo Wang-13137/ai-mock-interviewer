@@ -22,12 +22,22 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from .agent.loop import AgentLoop
+from .agent.state import SessionStore
+from .agent.tools import build_default_registry, load_question_bank
 from .clients.llm import BaseLLMClient, EchoClient, LLMError, OpenAICompatClient, Message
 from .core.config import Settings, load_settings, resolve_llm
 from .core.logger import setup_logging
 from .metrics import JsonlSink, LatencyMeter
 from .prompts.interviewer import build_messages
-from .schemas.chat import ChatRequest, ChatResponse, HealthResponse, Usage
+from .schemas.agent import ToolSpec
+from .schemas.chat import (
+    AgentChatResponse,
+    ChatRequest,
+    ChatResponse,
+    HealthResponse,
+    Usage,
+)
 
 log = logging.getLogger("aimi.app")
 
@@ -74,6 +84,13 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         app.state.settings = cfg
         app.state.client = build_client(cfg)
         app.state.sink = JsonlSink(cfg.metrics.path, enabled=cfg.metrics.enabled)
+        app.state.store = SessionStore()
+        if cfg.agent.enabled:
+            app.state.bank = load_question_bank(cfg.agent.question_bank)
+            app.state.registry = build_default_registry()
+        else:
+            app.state.bank = {}
+            app.state.registry = None
         log.info(
             "boot env=%s provider=%s model=%s ready=%s",
             cfg.env,
@@ -104,6 +121,76 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             model=client.model,
             ready=client.ready,
             version=cfg.version,
+            agent_enabled=cfg.agent.enabled and request.app.state.registry is not None,
+            tools=request.app.state.registry.names() if request.app.state.registry else [],
+        )
+
+    @app.get("/v1/tools", response_model=List[ToolSpec], tags=["agent"])
+    def list_tools(request: Request) -> List[ToolSpec]:
+        """暴露工具清单：前端要显示「本轮用了哪些工具」，测试要校验 Schema 合法性。"""
+        registry = request.app.state.registry
+        if registry is None:
+            return []
+        return registry.specs()
+
+    @app.post("/v1/chat/agent", response_model=AgentChatResponse, tags=["agent"])
+    async def chat_agent(req: ChatRequest, request: Request) -> AgentChatResponse:
+        """带工具的对话：多打几次模型，中途可能调用检索 / 状态读写工具。"""
+        client: BaseLLMClient = request.app.state.client
+        sink: JsonlSink = request.app.state.sink
+        cfg: Settings = request.app.state.settings
+        registry = request.app.state.registry
+        trace_id = uuid.uuid4().hex[:12]
+        meter = LatencyMeter()
+
+        loop = AgentLoop(
+            client=client,
+            registry=registry,
+            store=request.app.state.store,
+            bank=request.app.state.bank,
+            max_steps=cfg.agent.max_steps,
+        )
+        run = await loop.run(
+            _to_messages(req),
+            req.profile.model_dump(),
+            session_id=req.session_id,
+            temperature=req.temperature,
+            max_tokens=req.max_tokens,
+        )
+        report = meter.report()
+        sink.write(
+            {
+                **report,
+                "trace_id": trace_id,
+                "endpoint": "/v1/chat/agent",
+                "provider": client.provider_name,
+                "model": client.model,
+                "turn": req.turn_count,
+                "model_calls": run.model_calls,
+                "tool_calls": run.tool_calls,
+                "tool_errors": run.tool_errors,
+                "parse_errors": run.parse_errors,
+                "stopped": run.stopped,
+                "ok": run.stopped != "error",
+            }
+        )
+        return AgentChatResponse(
+            session_id=req.session_id,
+            reply=run.reply,
+            model=client.model,
+            provider=client.provider_name,
+            usage=Usage(
+                prompt_tokens=run.usage.prompt_tokens,
+                completion_tokens=run.usage.completion_tokens,
+                total_tokens=run.usage.total_tokens,
+            ),
+            trace_id=trace_id,
+            latency_ms=report["total_ms"],
+            steps=run.steps,
+            tool_calls=run.tool_calls,
+            tool_errors=run.tool_errors,
+            parse_errors=run.parse_errors,
+            stopped=run.stopped,
         )
 
     @app.post("/v1/chat", response_model=ChatResponse, tags=["chat"])

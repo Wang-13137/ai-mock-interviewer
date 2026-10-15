@@ -10,6 +10,8 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from .agent import AgentStep, StopReason
+
 Role = Literal["system", "user", "assistant"]
 
 InterviewStyle = Literal["专业严谨", "压力面试", "轻松交流"]
@@ -74,3 +76,15 @@ class HealthResponse(BaseModel):
     model: str = ""
     ready: bool = False
     version: str = ""
+    agent_enabled: bool = False
+    tools: List[str] = Field(default_factory=list)
+
+
+class AgentChatResponse(ChatResponse):
+    """带工具调用过程的响应：给前端展示 trace，也给 W3 评测留数据。"""
+
+    steps: List[AgentStep] = Field(default_factory=list)
+    tool_calls: int = 0
+    tool_errors: int = 0
+    parse_errors: int = 0
+    stopped: StopReason = "final"

@@ -36,6 +36,13 @@ judge:
   timeout: 30.0
   max_retries: 2
 
+# Agent（工具调用）：手写 tool-call 循环。max_steps 是防跑飞的安全阀
+agent:
+  enabled: true
+  max_steps: 3
+  protocol: handwritten      # 自建结构化协议，不依赖厂商原生 function calling
+  question_bank: config/question_bank.json
+
 # System Prompt / rubric / 岗位模板的存放目录（W2 起会往里加文件）
 prompts_dir: config/prompts
 
