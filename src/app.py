@@ -23,6 +23,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from .agent.loop import AgentLoop
+from .agent.memory import MemoryManager, MemoryPolicy
 from .agent.state import SessionStore
 from .agent.tools import build_default_registry, load_question_bank
 from .clients.llm import BaseLLMClient, EchoClient, LLMError, OpenAICompatClient, Message
@@ -71,6 +72,21 @@ def build_client(settings: Settings, role: str = "chat") -> BaseLLMClient:
         max_retries=llm.max_retries,
         temperature=llm.temperature,
         max_tokens=llm.max_tokens,
+    )
+
+
+def _build_memory(client: BaseLLMClient, cfg: Settings) -> Optional[MemoryManager]:
+    """记忆管理器：关闭或配置缺失时返回 None，AgentLoop 不做压缩。"""
+    if not cfg.memory.enabled:
+        return None
+    return MemoryManager(
+        client=client,
+        policy=MemoryPolicy(
+            enabled=True,
+            max_tokens=cfg.memory.max_tokens,
+            keep_recent=cfg.memory.keep_recent,
+            summary_max_chars=cfg.memory.summary_max_chars,
+        ),
     )
 
 
@@ -168,7 +184,9 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             store=request.app.state.store,
             bank=request.app.state.bank,
             max_steps=cfg.agent.max_steps,
+            memory=_build_memory(client, cfg),
         )
+
         run = await loop.run(
             _to_messages(req),
             req.profile.model_dump(),

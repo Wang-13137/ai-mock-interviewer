@@ -35,6 +35,7 @@ from .protocol import (
     render_tools_prompt,
     try_parse_tool_call,
 )
+from .memory import MemoryManager
 from .state import SessionStore
 from .tools import ToolContext, ToolRegistry
 
@@ -50,12 +51,14 @@ class AgentLoop:
         store: Optional[SessionStore] = None,
         bank: Optional[Dict[str, Any]] = None,
         max_steps: int = 3,
+        memory: Optional[MemoryManager] = None,
     ) -> None:
         self.client = client
         self.registry = registry
         self.store = store or SessionStore()
         self.bank = bank if bank is not None else {}
         self.max_steps = max(1, int(max_steps))
+        self.memory = memory
 
     # ---------------- 主循环 ---------------- #
     async def run(
@@ -70,7 +73,20 @@ class AgentLoop:
         steps: List[AgentStep] = []
         usage = AgentUsage()
         started = time.perf_counter()
-        await self._bump_turn(session_id)  # 用户刚说完话 = 一轮开始，工具要能立刻读到
+        st = await self._bump_turn(session_id)  # 用户刚说完话 = 一轮开始，工具要能立刻读到
+
+        # W5 记忆压缩：超预算时把老对话滚进摘要。注意压的是「带 system 的 messages」，
+        # 压缩完要重建，因为 build_messages 还会往里拼工具说明。
+        if self.memory is not None:
+            fitted, meta = await self.memory.fit(messages[1:], st)  # 跳过 system
+            if meta.get("compressed"):
+                steps.append(AgentStep(
+                    index=1, kind="memory", ok=True,
+                    content=f"tokens {meta['tokens_before']}->{meta['tokens_after']} "
+                            f"（{meta['summarizer']}，压缩 {meta['summarized_messages']} 条）",
+                    elapsed_ms=0.0,
+                ))
+                messages = self._build_messages(fitted, profile)
 
         seen_signatures: set[str] = set()
         warned = False
@@ -203,9 +219,10 @@ class AgentLoop:
         result = await self.registry.call(call.model_copy(update={"arguments": args}), ctx)
         return result, _ms(t0)
 
-    async def _bump_turn(self, session_id: str) -> None:
+    async def _bump_turn(self, session_id: str):
         st = await self.store.get(session_id)
         st.turns += 1
+        return st
 
     @staticmethod
     def _accumulate(usage: AgentUsage, u) -> None:

@@ -55,6 +55,15 @@ class AgentConfig(BaseModel):
     question_bank: str = "config/question_bank.json"
 
 
+class MemoryConfig(BaseModel):
+    """W5 会话记忆：历史估算 token 超预算后滚动压缩成摘要（见 agent/memory.py）。"""
+
+    enabled: bool = True
+    max_tokens: int = 3000
+    keep_recent: int = 6
+    summary_max_chars: int = 600
+
+
 class RagConfig(BaseModel):
     """检索配置。
 
@@ -85,6 +94,7 @@ class Settings(BaseModel):
     metrics: MetricsConfig = Field(default_factory=MetricsConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig)
     rag: RagConfig = Field(default_factory=RagConfig)
+    memory: MemoryConfig = Field(default_factory=MemoryConfig)
     prompts_dir: str = "config/prompts"
 
 

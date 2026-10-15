@@ -65,7 +65,7 @@ class AgentStep(BaseModel):
     """一次循环里的一个动作，构成完整 trace。用来算成功率、步数分布。"""
 
     index: int
-    kind: Literal["llm", "tool_call", "tool_result", "parse_error", "loop_guard", "final"]
+    kind: Literal["llm", "tool_call", "tool_result", "parse_error", "loop_guard", "final", "memory"]
     content: str = ""
     tool_name: str = ""
     arguments: Dict[str, Any] = Field(default_factory=dict)

@@ -33,6 +33,8 @@ class SessionState:
     turns: int = 0
     finished: bool = False
     summary: str = ""
+    # W5：滚动记忆摘要（超 token 预算时由 MemoryManager 写入）
+    memory_summary: str = ""
 
     @property
     def remaining_dimensions(self) -> List[str]:

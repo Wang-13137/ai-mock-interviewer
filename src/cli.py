@@ -61,7 +61,19 @@ async def _agent_loop(settings) -> None:
             reranker_name=settings.rag.rerank,
             reranker_model=settings.rag.reranker_model,
         )
-    loop = AgentLoop(client, registry, store, bank, max_steps=settings.agent.max_steps)
+    from src.agent.memory import MemoryManager, MemoryPolicy
+
+    memory = None
+    if settings.memory.enabled:
+        memory = MemoryManager(
+            client=client,
+            policy=MemoryPolicy(
+                max_tokens=settings.memory.max_tokens,
+                keep_recent=settings.memory.keep_recent,
+                summary_max_chars=settings.memory.summary_max_chars,
+            ),
+        )
+    loop = AgentLoop(client, registry, store, bank, max_steps=settings.agent.max_steps, memory=memory)
 
     print(f"[provider={client.provider_name} model={client.model} ready={client.ready}]")
     print(f"[tools={','.join(registry.names()) if registry else '无'} max_steps={settings.agent.max_steps}]")

@@ -1,0 +1,25 @@
+.git
+.gitignore
+.dockerignore
+Dockerfile
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# 密钥与本地环境
+.env
+.env.local
+
+# 模型权重（1.2GB+，需要时挂载而非打进镜像）
+models/
+
+# 报告与日志（含替身数据，不进镜像）
+reports/
+logs/
+
+tests/
+scripts/
+*.md
+!README.md
