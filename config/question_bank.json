@@ -1,42 +1,795 @@
 {
-  "version": "0.1-seed",
-  "note": "种子题库。W2 会换成向量检索（bge-small-zh + FAISS），但 search_question_bank 工具的输入输出契约不变。现版本用关键词打分（BM25 的简化版：TF + 维度/标签加权）。",
+  "version": "0.2-expanded",
+  "note": "80 条题库（32 种子 + 48 扩充，2026-10-16）。检索走 src/rag/（bm25/vector/hybrid 三策略），search_question_bank 工具契约不变。扩库后必须重跑 scripts/calibrate_min_score.py 与评测。",
   "items": [
-    { "id": "proj-01", "dimension": "项目深挖", "difficulty": 2, "tags": ["RAG", "项目"], "question": "你的检索增强问答项目里，知识库是怎么切分的？chunk 大小和多长重叠，是怎么定的？" },
-    { "id": "proj-02", "dimension": "项目深挖", "difficulty": 3, "tags": ["RAG", "重排", "评测"], "question": "你说加了重排模型，那你怎么证明重排确实有效？有没有做过消融实验？" },
-    { "id": "proj-03", "dimension": "项目深挖", "difficulty": 3, "tags": ["幻觉", "评测", "引用"], "question": "引用精确率从很低提到 0.65，中间改动最大的是哪一步？剩下没覆盖的场景主要是什么问题？" },
-    { "id": "proj-04", "dimension": "项目深挖", "difficulty": 3, "tags": ["显著性检验", "统计"], "question": "你用了 McNemar 检验而不是直接比较准确率，这个选择背后的考虑是什么？" },
-    { "id": "proj-05", "dimension": "项目深挖", "difficulty": 2, "tags": ["负结果", "深度学习"], "question": "深度学习模型没有跑过传统方法时，你是怎么判断问题出在哪的？最后结论是什么？" },
-    { "id": "proj-06", "dimension": "项目深挖", "difficulty": 3, "tags": ["批次效应", "数据泄漏"], "question": "交叉验证里发现存在批次效应泄漏，你是怎么验证这个判断的，用了什么对照实验？" },
-    { "id": "proj-07", "dimension": "项目深挖", "difficulty": 2, "tags": ["质谱", "特征工程"], "question": "830 个峰筛到 47 个特征，你的筛选流程是什么？每一步的依据是什么？" },
-    { "id": "proj-08", "dimension": "项目深挖", "difficulty": 2, "tags": ["可解释性", "线性探针"], "question": "你用线性探针、遮挡法和置换检验做可解释性，这三者给出的结论一致吗？不一致时信谁？" },
-
-    { "id": "llm-01", "dimension": "LLM 工程能力", "difficulty": 2, "tags": ["RAG", "检索"], "question": "如果让你自己搭一套 RAG，你会分几步做？先做哪一步，为什么？" },
-    { "id": "llm-02", "dimension": "LLM 工程能力", "difficulty": 2, "tags": ["向量库", "FAISS"], "question": "向量库该怎么选？什么时候用 FAISS 就够了，什么时候必须上 Milvus 或 PGVector？" },
-    { "id": "llm-03", "dimension": "LLM 工程能力", "difficulty": 3, "tags": ["流式", "时延", "TTFT"], "question": "流式输出的首字延迟（TTFT）和端到端延迟，分别受哪些因素影响？你会怎么优化？" },
-    { "id": "llm-04", "dimension": "LLM 工程能力", "difficulty": 3, "tags": ["Agent", "工具调用"], "question": "Agent 循环里模型一直重复调用同一个工具，你会在工程上怎么处理？" },
-    { "id": "llm-05", "dimension": "LLM 工程能力", "difficulty": 3, "tags": ["上下文", "记忆"], "question": "多轮对话越来越长时会遇到什么问题？压缩上下文有哪几种做法，各自代价是什么？" },
-    { "id": "llm-06", "dimension": "LLM 工程能力", "difficulty": 2, "tags": ["提示词", "幻觉"], "question": "怎么降低大模型编造事实的概率？只靠提示词够不够？" },
-    { "id": "llm-07", "dimension": "LLM 工程能力", "difficulty": 3, "tags": ["评测", "LLM-as-judge"], "question": "用大模型当裁判打分，最大的风险是什么？你怎么校准它和人工评分的一致性？" },
-    { "id": "llm-08", "dimension": "LLM 工程能力", "difficulty": 2, "tags": ["成本", "Token"], "question": "线上跑一段时间发现 Token 成本超标，你会从哪几个地方下手？" },
-
-    { "id": "data-01", "dimension": "数据与统计", "difficulty": 2, "tags": ["FDR", "多重检验"], "question": "为什么要做多重检验校正？BH 方法和 Bonferroni 的区别是什么，你选了哪个？" },
-    { "id": "data-02", "dimension": "数据与统计", "difficulty": 3, "tags": ["交叉验证", "类别不平衡"], "question": "样本极度不平衡时，准确率和 AUC 都可能骗人，你还会看什么指标？" },
-    { "id": "data-03", "dimension": "数据与统计", "difficulty": 2, "tags": ["特征选择", "过拟合"], "question": "特征很少、样本也很少时怎么做建模？你怎么避免看起来很好其实是过拟合？" },
-    { "id": "data-04", "dimension": "数据与统计", "difficulty": 3, "tags": ["分布漂移", "监控"], "question": "模型上线后数据分布慢慢变了，怎么在没有标注的情况下发现这件事？" },
-    { "id": "data-05", "dimension": "数据与统计", "difficulty": 2, "tags": ["归一化", "预处理"], "question": "训练集和测试集的标准化参数是谁的？为什么不能用全量数据一起算？" },
-
-    { "id": "eng-01", "dimension": "工程基础", "difficulty": 2, "tags": ["FastAPI", "服务化"], "question": "把一个脚本改成 HTTP 服务，你会怎么设计接口和错误处理？" },
-    { "id": "eng-02", "dimension": "工程基础", "difficulty": 2, "tags": ["单元测试", "CI"], "question": "LLM 应用这种带随机性的代码，单元测试到底测什么？" },
-    { "id": "eng-03", "dimension": "工程基础", "difficulty": 2, "tags": ["重试", "降级"], "question": "上游 LLM 接口超时或返回 429，你在客户端怎么处理？" },
-    { "id": "eng-04", "dimension": "工程基础", "difficulty": 3, "tags": ["并发", "异步"], "question": "评测要并发跑几百条请求，你会怎么控制并发度？异步一定比多线程快吗？" },
-    { "id": "eng-05", "dimension": "工程基础", "difficulty": 2, "tags": ["Docker", "日志"], "question": "服务容器化和埋点日志，你会记录哪些字段来支持事后排查？" },
-    { "id": "eng-06", "dimension": "工程基础", "difficulty": 2, "tags": ["Git", "协作"], "question": "多人改同一个配置文件，怎么做才不容易互相覆盖？" },
-
-    { "id": "beh-01", "dimension": "行为与动机", "difficulty": 1, "tags": ["自我介绍"], "question": "用两分钟介绍一下你自己，重点说为什么适合这个岗位。" },
-    { "id": "beh-02", "dimension": "行为与动机", "difficulty": 2, "tags": ["转行", "动机"], "question": "你本科是生物医学工程，为什么选择做 AI 应用方向？" },
-    { "id": "beh-03", "dimension": "行为与动机", "difficulty": 2, "tags": ["缺点", "自我认知"], "question": "说一个你真实存在的技术短板，以及你打算怎么补。" },
-    { "id": "beh-04", "dimension": "行为与动机", "difficulty": 2, "tags": ["团队协作"], "question": "讲一次你和别人技术方案不一致的经历，最后怎么解决的？" },
-    { "id": "beh-05", "dimension": "行为与动机", "difficulty": 2, "tags": ["反问"], "question": "你有什么想问我们的吗？" }
+    {
+      "id": "proj-01",
+      "dimension": "项目深挖",
+      "difficulty": 2,
+      "tags": [
+        "RAG",
+        "项目"
+      ],
+      "question": "你的检索增强问答项目里，知识库是怎么切分的？chunk 大小和多长重叠，是怎么定的？"
+    },
+    {
+      "id": "proj-02",
+      "dimension": "项目深挖",
+      "difficulty": 3,
+      "tags": [
+        "RAG",
+        "重排",
+        "评测"
+      ],
+      "question": "你说加了重排模型，那你怎么证明重排确实有效？有没有做过消融实验？"
+    },
+    {
+      "id": "proj-03",
+      "dimension": "项目深挖",
+      "difficulty": 3,
+      "tags": [
+        "幻觉",
+        "评测",
+        "引用"
+      ],
+      "question": "引用精确率从很低提到 0.65，中间改动最大的是哪一步？剩下没覆盖的场景主要是什么问题？"
+    },
+    {
+      "id": "proj-04",
+      "dimension": "项目深挖",
+      "difficulty": 3,
+      "tags": [
+        "显著性检验",
+        "统计"
+      ],
+      "question": "你用了 McNemar 检验而不是直接比较准确率，这个选择背后的考虑是什么？"
+    },
+    {
+      "id": "proj-05",
+      "dimension": "项目深挖",
+      "difficulty": 2,
+      "tags": [
+        "负结果",
+        "深度学习"
+      ],
+      "question": "深度学习模型没有跑过传统方法时，你是怎么判断问题出在哪的？最后结论是什么？"
+    },
+    {
+      "id": "proj-06",
+      "dimension": "项目深挖",
+      "difficulty": 3,
+      "tags": [
+        "批次效应",
+        "数据泄漏"
+      ],
+      "question": "交叉验证里发现存在批次效应泄漏，你是怎么验证这个判断的，用了什么对照实验？"
+    },
+    {
+      "id": "proj-07",
+      "dimension": "项目深挖",
+      "difficulty": 2,
+      "tags": [
+        "质谱",
+        "特征工程"
+      ],
+      "question": "830 个峰筛到 47 个特征，你的筛选流程是什么？每一步的依据是什么？"
+    },
+    {
+      "id": "proj-08",
+      "dimension": "项目深挖",
+      "difficulty": 2,
+      "tags": [
+        "可解释性",
+        "线性探针"
+      ],
+      "question": "你用线性探针、遮挡法和置换检验做可解释性，这三者给出的结论一致吗？不一致时信谁？"
+    },
+    {
+      "id": "llm-01",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "RAG",
+        "检索"
+      ],
+      "question": "如果让你自己搭一套 RAG，你会分几步做？先做哪一步，为什么？"
+    },
+    {
+      "id": "llm-02",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "向量库",
+        "FAISS"
+      ],
+      "question": "向量库该怎么选？什么时候用 FAISS 就够了，什么时候必须上 Milvus 或 PGVector？"
+    },
+    {
+      "id": "llm-03",
+      "dimension": "LLM 工程能力",
+      "difficulty": 3,
+      "tags": [
+        "流式",
+        "时延",
+        "TTFT"
+      ],
+      "question": "流式输出的首字延迟（TTFT）和端到端延迟，分别受哪些因素影响？你会怎么优化？"
+    },
+    {
+      "id": "llm-04",
+      "dimension": "LLM 工程能力",
+      "difficulty": 3,
+      "tags": [
+        "Agent",
+        "工具调用"
+      ],
+      "question": "Agent 循环里模型一直重复调用同一个工具，你会在工程上怎么处理？"
+    },
+    {
+      "id": "llm-05",
+      "dimension": "LLM 工程能力",
+      "difficulty": 3,
+      "tags": [
+        "上下文",
+        "记忆"
+      ],
+      "question": "多轮对话越来越长时会遇到什么问题？压缩上下文有哪几种做法，各自代价是什么？"
+    },
+    {
+      "id": "llm-06",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "提示词",
+        "幻觉"
+      ],
+      "question": "怎么降低大模型编造事实的概率？只靠提示词够不够？"
+    },
+    {
+      "id": "llm-07",
+      "dimension": "LLM 工程能力",
+      "difficulty": 3,
+      "tags": [
+        "评测",
+        "LLM-as-judge"
+      ],
+      "question": "用大模型当裁判打分，最大的风险是什么？你怎么校准它和人工评分的一致性？"
+    },
+    {
+      "id": "llm-08",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "成本",
+        "Token"
+      ],
+      "question": "线上跑一段时间发现 Token 成本超标，你会从哪几个地方下手？"
+    },
+    {
+      "id": "data-01",
+      "dimension": "数据与统计",
+      "difficulty": 2,
+      "tags": [
+        "FDR",
+        "多重检验"
+      ],
+      "question": "为什么要做多重检验校正？BH 方法和 Bonferroni 的区别是什么，你选了哪个？"
+    },
+    {
+      "id": "data-02",
+      "dimension": "数据与统计",
+      "difficulty": 3,
+      "tags": [
+        "交叉验证",
+        "类别不平衡"
+      ],
+      "question": "样本极度不平衡时，准确率和 AUC 都可能骗人，你还会看什么指标？"
+    },
+    {
+      "id": "data-03",
+      "dimension": "数据与统计",
+      "difficulty": 2,
+      "tags": [
+        "特征选择",
+        "过拟合"
+      ],
+      "question": "特征很少、样本也很少时怎么做建模？你怎么避免看起来很好其实是过拟合？"
+    },
+    {
+      "id": "data-04",
+      "dimension": "数据与统计",
+      "difficulty": 3,
+      "tags": [
+        "分布漂移",
+        "监控"
+      ],
+      "question": "模型上线后数据分布慢慢变了，怎么在没有标注的情况下发现这件事？"
+    },
+    {
+      "id": "data-05",
+      "dimension": "数据与统计",
+      "difficulty": 2,
+      "tags": [
+        "归一化",
+        "预处理"
+      ],
+      "question": "训练集和测试集的标准化参数是谁的？为什么不能用全量数据一起算？"
+    },
+    {
+      "id": "eng-01",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "FastAPI",
+        "服务化"
+      ],
+      "question": "把一个脚本改成 HTTP 服务，你会怎么设计接口和错误处理？"
+    },
+    {
+      "id": "eng-02",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "单元测试",
+        "CI"
+      ],
+      "question": "LLM 应用这种带随机性的代码，单元测试到底测什么？"
+    },
+    {
+      "id": "eng-03",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "重试",
+        "降级"
+      ],
+      "question": "上游 LLM 接口超时或返回 429，你在客户端怎么处理？"
+    },
+    {
+      "id": "eng-04",
+      "dimension": "工程基础",
+      "difficulty": 3,
+      "tags": [
+        "并发",
+        "异步"
+      ],
+      "question": "评测要并发跑几百条请求，你会怎么控制并发度？异步一定比多线程快吗？"
+    },
+    {
+      "id": "eng-05",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "Docker",
+        "日志"
+      ],
+      "question": "服务容器化和埋点日志，你会记录哪些字段来支持事后排查？"
+    },
+    {
+      "id": "eng-06",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "Git",
+        "协作"
+      ],
+      "question": "多人改同一个配置文件，怎么做才不容易互相覆盖？"
+    },
+    {
+      "id": "beh-01",
+      "dimension": "行为与动机",
+      "difficulty": 1,
+      "tags": [
+        "自我介绍"
+      ],
+      "question": "用两分钟介绍一下你自己，重点说为什么适合这个岗位。"
+    },
+    {
+      "id": "beh-02",
+      "dimension": "行为与动机",
+      "difficulty": 2,
+      "tags": [
+        "转行",
+        "动机"
+      ],
+      "question": "你本科是生物医学工程，为什么选择做 AI 应用方向？"
+    },
+    {
+      "id": "beh-03",
+      "dimension": "行为与动机",
+      "difficulty": 2,
+      "tags": [
+        "缺点",
+        "自我认知"
+      ],
+      "question": "说一个你真实存在的技术短板，以及你打算怎么补。"
+    },
+    {
+      "id": "beh-04",
+      "dimension": "行为与动机",
+      "difficulty": 2,
+      "tags": [
+        "团队协作"
+      ],
+      "question": "讲一次你和别人技术方案不一致的经历，最后怎么解决的？"
+    },
+    {
+      "id": "beh-05",
+      "dimension": "行为与动机",
+      "difficulty": 2,
+      "tags": [
+        "反问"
+      ],
+      "question": "你有什么想问我们的吗？"
+    },
+    {
+      "id": "proj-09",
+      "dimension": "项目深挖",
+      "difficulty": 2,
+      "tags": [
+        "RAG",
+        "混合检索"
+      ],
+      "question": "混合检索里 BM25 和向量检索的分数尺度完全不同，你是怎么把两路结果合到一起的？"
+    },
+    {
+      "id": "proj-10",
+      "dimension": "项目深挖",
+      "difficulty": 2,
+      "tags": [
+        "评测",
+        "饱和"
+      ],
+      "question": "你的检索评测集只有几十条标注，怎么防止「评测集饱和」——所有方法都接近满分、看不出差异？"
+    },
+    {
+      "id": "proj-11",
+      "dimension": "项目深挖",
+      "difficulty": 3,
+      "tags": [
+        "阈值",
+        "标定"
+      ],
+      "question": "向量检索的相似度阈值是怎么定的？换一个 embedding 模型之后，这个阈值还有效吗？"
+    },
+    {
+      "id": "proj-12",
+      "dimension": "项目深挖",
+      "difficulty": 2,
+      "tags": [
+        "分词",
+        "中文"
+      ],
+      "question": "中文检索里直接用单字分词会有什么问题？你是怎么处理的？"
+    },
+    {
+      "id": "proj-13",
+      "dimension": "项目深挖",
+      "difficulty": 3,
+      "tags": [
+        "负结果",
+        "决策"
+      ],
+      "question": "有没有哪个「标准做法」你在项目里实测后发现是负收益？你当时怎么验证、怎么决策的？"
+    },
+    {
+      "id": "proj-14",
+      "dimension": "项目深挖",
+      "difficulty": 2,
+      "tags": [
+        "离线",
+        "测试"
+      ],
+      "question": "没有 API Key、没有 GPU 的开发机上，你怎么让整条 RAG 链路还能跑起来、还能被测试覆盖？"
+    },
+    {
+      "id": "proj-15",
+      "dimension": "项目深挖",
+      "difficulty": 3,
+      "tags": [
+        "幻觉",
+        "归因"
+      ],
+      "question": "引用精确率卡住上不去时，你怎么区分是检索召回的问题还是生成环节的问题？"
+    },
+    {
+      "id": "proj-16",
+      "dimension": "项目深挖",
+      "difficulty": 2,
+      "tags": [
+        "毕设",
+        "VR"
+      ],
+      "question": "你的毕设 VR 系统里，AI 模块和三维引擎之间是怎么通信的？延迟怎么控制？"
+    },
+    {
+      "id": "proj-17",
+      "dimension": "项目深挖",
+      "difficulty": 3,
+      "tags": [
+        "质谱",
+        "选型"
+      ],
+      "question": "MALDI 质谱数据维度高、样本少，你为什么先用传统机器学习而不是直接上深度学习？"
+    },
+    {
+      "id": "proj-18",
+      "dimension": "项目深挖",
+      "difficulty": 2,
+      "tags": [
+        "复盘",
+        "负结果"
+      ],
+      "question": "你在项目文档里专门记录了没跑通的实验，为什么要把负结果也留下来？"
+    },
+    {
+      "id": "llm-09",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "prompt"
+      ],
+      "question": "系统提示词里你会写哪些内容？指令的顺序和长度对模型行为有影响吗？"
+    },
+    {
+      "id": "llm-10",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "结构化输出",
+        "JSON"
+      ],
+      "question": "怎么让模型稳定输出合法 JSON？模型不遵守格式时你的兜底策略是什么？"
+    },
+    {
+      "id": "llm-11",
+      "dimension": "LLM 工程能力",
+      "difficulty": 3,
+      "tags": [
+        "工具调用",
+        "协议"
+      ],
+      "question": "不用厂商原生 function calling，自己用提示词协议实现工具调用，好处和代价分别是什么？"
+    },
+    {
+      "id": "llm-12",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "会话",
+        "并发"
+      ],
+      "question": "多轮面试里会话状态怎么管理？两个请求同时改同一个会话会出什么坑？"
+    },
+    {
+      "id": "llm-13",
+      "dimension": "LLM 工程能力",
+      "difficulty": 3,
+      "tags": [
+        "缓存"
+      ],
+      "question": "RAG 链路里哪些环节适合加缓存？embedding、检索结果、LLM 响应的失效策略分别怎么设计？"
+    },
+    {
+      "id": "llm-14",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "降级",
+        "可用性"
+      ],
+      "question": "上游模型挂了或者额度用尽，你的服务怎么降级才不直接把错误甩给用户？"
+    },
+    {
+      "id": "llm-15",
+      "dimension": "LLM 工程能力",
+      "difficulty": 3,
+      "tags": [
+        "评测",
+        "judge"
+      ],
+      "question": "LLM-as-judge 和人工评分的一致性用什么指标衡量？Cohen's kappa 在什么情况下会失效？"
+    },
+    {
+      "id": "llm-16",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "成本",
+        "token"
+      ],
+      "question": "怎么估算一次多轮对话的 token 成本？上下文、工具回传内容各占多少比例？"
+    },
+    {
+      "id": "llm-17",
+      "dimension": "LLM 工程能力",
+      "difficulty": 3,
+      "tags": [
+        "安全",
+        "注入"
+      ],
+      "question": "用户在对话里注入「忽略之前的指令」这类内容，你的系统有哪几道防线？"
+    },
+    {
+      "id": "llm-18",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "多模型",
+        "路由"
+      ],
+      "question": "生成模型和裁判模型为什么不能用同一个？接多个厂商的模型时接口怎么统一？"
+    },
+    {
+      "id": "llm-19",
+      "dimension": "LLM 工程能力",
+      "difficulty": 2,
+      "tags": [
+        "SSE",
+        "协议"
+      ],
+      "question": "SSE 和 WebSocket 的区别是什么？为什么 LLM 服务普遍用 SSE 做流式输出？"
+    },
+    {
+      "id": "llm-20",
+      "dimension": "LLM 工程能力",
+      "difficulty": 1,
+      "tags": [
+        "采样",
+        "基础"
+      ],
+      "question": "temperature 和 top_p 分别控制什么？面试问答这种场景你会怎么设置？"
+    },
+    {
+      "id": "eng-07",
+      "dimension": "工程基础",
+      "difficulty": 1,
+      "tags": [
+        "git"
+      ],
+      "question": "git 里 rebase 和 merge 的区别是什么？团队协作时你怎么选？"
+    },
+    {
+      "id": "eng-08",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "配置",
+        "密钥"
+      ],
+      "question": "配置用 YAML 默认值加环境变量覆盖，这套机制怎么实现？API 密钥应该怎么管？"
+    },
+    {
+      "id": "eng-09",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "日志",
+        "埋点"
+      ],
+      "question": "一次请求从进来到返回，你会埋哪些点？TTFT 和端到端时延为什么要分开记录？"
+    },
+    {
+      "id": "eng-10",
+      "dimension": "工程基础",
+      "difficulty": 3,
+      "tags": [
+        "asyncio",
+        "锁"
+      ],
+      "question": "asyncio 里共享的会话存储为什么还要加锁？不加锁会出现什么现象？"
+    },
+    {
+      "id": "eng-11",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "测试"
+      ],
+      "question": "评测集和单元测试的分工是什么？什么样的 bug 值得固化成回归测试？"
+    },
+    {
+      "id": "eng-12",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "依赖",
+        "降级"
+      ],
+      "question": "引入一个 1GB 的模型依赖之前你会考虑哪些因素？怎么设计优雅降级？"
+    },
+    {
+      "id": "eng-13",
+      "dimension": "工程基础",
+      "difficulty": 3,
+      "tags": [
+        "性能",
+        "排查"
+      ],
+      "question": "服务 P95 延迟突然升高，你的排查顺序是什么？"
+    },
+    {
+      "id": "eng-14",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "API",
+        "兼容"
+      ],
+      "question": "接口版本兼容怎么做？「标记废弃」和「直接删字段」的区别是什么？"
+    },
+    {
+      "id": "eng-15",
+      "dimension": "工程基础",
+      "difficulty": 2,
+      "tags": [
+        "部署",
+        "环境"
+      ],
+      "question": "开发机、评测机、线上环境的差异怎么管理？怎么避免「在我机器上能跑」？"
+    },
+    {
+      "id": "eng-16",
+      "dimension": "工程基础",
+      "difficulty": 1,
+      "tags": [
+        "HTTP",
+        "基础"
+      ],
+      "question": "HTTP 429 和 503 分别意味着什么？客户端的应对策略有什么不同？"
+    },
+    {
+      "id": "data-06",
+      "dimension": "数据与统计",
+      "difficulty": 2,
+      "tags": [
+        "指标"
+      ],
+      "question": "Precision、Recall、F1 分别回答什么问题？检索场景为什么更常用 Recall@k 和 MRR？"
+    },
+    {
+      "id": "data-07",
+      "dimension": "数据与统计",
+      "difficulty": 3,
+      "tags": [
+        "泄漏"
+      ],
+      "question": "数据泄漏有哪些隐蔽的形式？除了批次效应，你还能想到哪种？"
+    },
+    {
+      "id": "data-08",
+      "dimension": "数据与统计",
+      "difficulty": 2,
+      "tags": [
+        "可视化",
+        "沟通"
+      ],
+      "question": "给非技术背景的人讲模型效果，你会画什么图？为什么不直接报一串数字？"
+    },
+    {
+      "id": "data-09",
+      "dimension": "数据与统计",
+      "difficulty": 3,
+      "tags": [
+        "kappa",
+        "一致性"
+      ],
+      "question": "kappa paradox 是什么？为什么类别极不均衡时 Cohen's kappa 会趋近于 0？"
+    },
+    {
+      "id": "data-10",
+      "dimension": "数据与统计",
+      "difficulty": 2,
+      "tags": [
+        "标注",
+        "采样"
+      ],
+      "question": "标注预算只够标 30 条评测数据，你怎么分配字面改写和语义改写的比例？"
+    },
+    {
+      "id": "data-11",
+      "dimension": "数据与统计",
+      "difficulty": 2,
+      "tags": [
+        "特征",
+        "可解释性"
+      ],
+      "question": "特征重要性排序和模型可解释性是一回事吗？置换检验为什么更可靠？"
+    },
+    {
+      "id": "data-12",
+      "dimension": "数据与统计",
+      "difficulty": 3,
+      "tags": [
+        "embedding",
+        "漂移"
+      ],
+      "question": "embedding 模型升级之后，线上已有的向量索引必须重建吗？为什么？"
+    },
+    {
+      "id": "data-13",
+      "dimension": "数据与统计",
+      "difficulty": 1,
+      "tags": [
+        "分布",
+        "基础"
+      ],
+      "question": "均值、中位数、P95 分别适合描述什么分布？延迟数据为什么要看 P95？"
+    },
+    {
+      "id": "beh-06",
+      "dimension": "行为与动机",
+      "difficulty": 1,
+      "tags": [
+        "动机"
+      ],
+      "question": "如果入职后发现实际工作内容和想象的不一样，你会怎么办？"
+    },
+    {
+      "id": "beh-07",
+      "dimension": "行为与动机",
+      "difficulty": 2,
+      "tags": [
+        "协作",
+        "求助"
+      ],
+      "question": "讲一次你主动向他人求助的经历，当时卡在哪、怎么开口的？"
+    },
+    {
+      "id": "beh-08",
+      "dimension": "行为与动机",
+      "difficulty": 2,
+      "tags": [
+        "转行",
+        "学习"
+      ],
+      "question": "从生物医学工程转到 AI 方向，你的自学路径是什么？哪一步最难？"
+    },
+    {
+      "id": "beh-09",
+      "dimension": "行为与动机",
+      "difficulty": 1,
+      "tags": [
+        "规划"
+      ],
+      "question": "你未来三年的职业规划是什么？为什么第一步选这个岗位？"
+    },
+    {
+      "id": "beh-10",
+      "dimension": "行为与动机",
+      "difficulty": 2,
+      "tags": [
+        "抗压"
+      ],
+      "question": "项目 deadline 前发现核心指标不达标，你会怎么处理？"
+    },
+    {
+      "id": "beh-11",
+      "dimension": "行为与动机",
+      "difficulty": 2,
+      "tags": [
+        "复盘",
+        "习惯"
+      ],
+      "question": "你有写工作日志或复盘的习惯吗？最近一次复盘改变了你什么做法？"
+    },
+    {
+      "id": "beh-12",
+      "dimension": "行为与动机",
+      "difficulty": 3,
+      "tags": [
+        "冲突"
+      ],
+      "question": "如果主管坚持一个你验证过是错的技术方案，你会怎么做？"
+    },
+    {
+      "id": "beh-13",
+      "dimension": "行为与动机",
+      "difficulty": 1,
+      "tags": [
+        "收尾"
+      ],
+      "question": "除了简历上的项目，你业余还做过哪些和技术有关的事？"
+    }
   ]
 }
