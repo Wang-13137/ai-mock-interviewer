@@ -120,7 +120,13 @@ def test_rrf_boosts_documents_found_by_both_routes():
 # 四、Retriever
 # --------------------------------------------------------------------------- #
 def test_three_strategies_all_retrieve(corpus):
+    has_real_embedder = available_backends()["sentence-transformers"]
     for strategy in Strategy:
+        if strategy is Strategy.VECTOR and not has_real_embedder:
+            # HashingEmbedder 是替身，做不了语义检索——拿替身断言"能检索到"
+            # 只会得到一个必然失败的假测试（2026-11-05 CI 实测：195 过 2 挂）。
+            # 语义路径由装有 sentence-transformers 的环境负责（本地 / CI semantic job）。
+            pytest.skip("无 sentence-transformers：VECTOR 用例依赖真实 embedder，替身测不了语义")
         r = Retriever(corpus, strategy=strategy)
         hits = r.search("向量库 FAISS 选型", top_k=3)
         assert hits, f"{strategy} 应能检索到结果"
@@ -140,7 +146,12 @@ def test_vector_retrieval_requires_similarity_threshold(corpus):
     余弦相似度几乎不会等于 0：再不相干的文档也有 0.15 左右的分。
     关掉阈值时「无命中」这个概念在向量检索里根本不存在，
     Agent 就会被一堆毫无关系的召回带偏。（BM25 天然有 >0 语义，不需要这步。）
+
+    只在真实 embedder 下跑：HashingEmbedder 对任何 query 的哈希都不同，
+    「关掉阈值必然假命中」这个前提在替身身上根本不成立。
     """
+    if not available_backends()["sentence-transformers"]:
+        pytest.skip("无 sentence-transformers：min_score 语义只对真实 embedder 成立")
     loose = Retriever(corpus, strategy=Strategy.VECTOR, min_score=0.0)
     assert loose.search("zzzz 量子佛学", top_k=3), "预期：关掉阈值必然假命中"
 
