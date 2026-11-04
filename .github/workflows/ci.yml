@@ -2,7 +2,10 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    # 仓库主分支实际是 master。原先只写 main，导致 push 触发的 CI 从未运行过
+    # （2026-11-05 对照远程分支时发现）——这类"配置看起来对、其实没生效"的问题，
+    # 只有拿实际分支名核对才会暴露。
+    branches: [master, main]
   pull_request:
 
 jobs:
