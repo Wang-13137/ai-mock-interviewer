@@ -30,10 +30,25 @@
 | 重排在早期 30 条集上 MRR **0.883→0.828**（故 `rag.rerank=none` 默认关闭） | 早期集 22 literal + 8 semantic | `docs/evidence/retrieval-bge-80.{md,json}`、`retrieval-rerank-80.{md,json}` |
 | 「结论随评测集难度翻转」：30 条简单集纯向量反超，补 22 条字面零重叠语义难例后 hybrid 反超，最终扩到 60 条 | 评测集构成，不是模型改动 | 上述四份报告按时间顺序 |
 | 非负 IDF 变体、`min_score` 阈值、中文 bigram、RRF 融合 | 代码实现，非效果数字 | `src/rag/{bm25,vector,tokenize,fusion}.py` |
-| pytest **139 passed** | **测试用例数量**，全部跑在离线替身 / `httpx.MockTransport` 上 | `tests/`、`.github/workflows/ci.yml` |
+| pytest **197 passed** | **测试用例数量**，全部跑在离线替身 / `httpx.MockTransport` 上 | `tests/`、`.github/workflows/ci.yml` |
 
 > 引用纪律：语料仅 80 条，**Recall@k 绝对值没有普适参考价值**，只能讲「同一份标注上哪个策略相对更好」。
-> 「139 passed」只能说成「139 个自动化用例」，**不得说成「真实模型端到端验证」**。
+> 「197 passed」只能说成「179 个自动化用例」，**不得说成「真实模型端到端验证」**。
+
+### 本表自身的维护规则（防止真值表过期）
+
+真值表只有在**它自己不会漂移**时才配叫唯一权威。历史上这里写的是一个过时的用例数（139）<!-- drift-ignore -->，
+中台加完 40 个用例后实际已是 `179`，而 `README.md` 更新了、本表没更新——
+一个自称"冲突以本表为准"的文件，自己成了唯一错的那个。
+
+所以纪律不靠人记，靠机器查：
+
+```bash
+python scripts/check_docs_drift.py      # 退出码非 0 = 文档与实际不符，CI 会拦
+```
+
+该脚本用 `pytest --collect-only` 取真实用例数，扫描 `README.md` 与 `docs/*.md` 里所有
+`<数字> passed` 断言，任一与本表不符即失败。**改测试数必须同步本表**，否则 CI 红。
 
 ---
 

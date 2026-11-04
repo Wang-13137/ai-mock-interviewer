@@ -29,5 +29,9 @@ jobs:
         # 全程跑在离线替身 EchoClient 上，CI 不需要任何 API Key
         run: pytest -q
 
+      - name: Docs drift check
+        # 真值表与文档里的用例数必须等于实际用例数，否则 CI 红
+        run: python scripts/check_docs_drift.py
+
       - name: Smoke check (import app)
         run: python -c "from src.app import app; print('app ok', app.title, app.version)"

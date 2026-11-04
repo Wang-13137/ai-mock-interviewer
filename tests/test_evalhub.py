@@ -108,12 +108,23 @@ def test_gate_ignores_small_noise():
     assert compare(base, cur, threshold=0.02).verdict is Verdict.PASS
 
 
-def test_gate_regressed_when_relative_drop_exceeds_threshold():
-    # 基线很小：绝对差 0.004 没到阈值，但相对跌幅 10% 到了
+def test_gate_ignores_relative_amplification_on_small_baseline():
+    """小 baseline 的相对放大是噪声，不是退步。
+
+    0.04 → 0.036 相对跌 10%，看着吓人，但在 60 条样本上只等于 1 条 case 翻转。
+    v0.8 之前用「绝对 or 相对」任一超阈即判退步，于是这里会误报。
+    现在要求两者同时超过，且（有明细时）CI 也要显著。
+    """
     base = make_run("base", metrics={"hit@1": 0.04})
     cur = make_run("cur", metrics={"hit@1": 0.036})
-    gate = compare(base, cur, threshold=0.02)
-    assert gate.verdict is Verdict.REGRESSED
+    assert compare(base, cur, threshold=0.02, abs_threshold=0.02).verdict is Verdict.PASS
+
+
+def test_gate_ignores_big_absolute_but_tiny_relative_drop():
+    """反方向同理：baseline 很大时，绝对差看起来不小但相对只动了 0.3%。"""
+    base = make_run("base", metrics={"avg_steps": 10.0})
+    cur = make_run("cur", metrics={"avg_steps": 10.03})
+    assert compare(base, cur, threshold=0.02, abs_threshold=0.02).verdict is Verdict.PASS
 
 
 def test_gate_incomparable_on_task_mismatch():
@@ -235,7 +246,8 @@ def test_api_lists_tasks(client):
 
 
 def test_api_run_and_fetch(client):
-    resp = client.post("/v1/eval/runs", json={"task": "retrieval"})
+    # wait=true：脚本/CI 场景要一次拿到结果，语义与 v0.7 之前一致
+    resp = client.post("/v1/eval/runs?wait=true", json={"task": "retrieval"})
     assert resp.status_code == 200
     body = resp.json()
     assert body["trusted"] is True
@@ -252,8 +264,10 @@ def test_api_run_and_fetch(client):
 
 
 def test_api_gate_endpoint(client):
-    first = client.post("/v1/eval/runs", json={"task": "retrieval"}).json()
-    second = client.post("/v1/eval/runs", json={"task": "retrieval", "baseline_run": first["id"]}).json()
+    first = client.post("/v1/eval/runs?wait=true", json={"task": "retrieval"}).json()
+    second = client.post(
+        "/v1/eval/runs?wait=true", json={"task": "retrieval", "baseline_run": first["id"]}
+    ).json()
     assert second["verdict"] == "pass"
 
     gate = client.post(f"/v1/eval/runs/{second['id']}/gate?baseline={first['id']}").json()

@@ -12,8 +12,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from ..core.auth import require_api_key
 from .models import DatasetRecord, LineageGraph, QualityReport, SyncResult
 
 router = APIRouter(prefix="/v1/data", tags=["data"])
@@ -49,7 +50,12 @@ def get_quality(dataset_id: str, request: Request) -> QualityReport:
     return record.quality
 
 
-@router.post("/datasets/{dataset_id}/sync", response_model=SyncResult, summary="同步单个数据集")
+@router.post(
+    "/datasets/{dataset_id}/sync",
+    response_model=SyncResult,
+    summary="同步单个数据集",
+    dependencies=[Depends(require_api_key)],
+)
 def sync_dataset(
     dataset_id: str,
     request: Request,
@@ -62,7 +68,12 @@ def sync_dataset(
     return result
 
 
-@router.post("/sync", response_model=List[SyncResult], summary="按依赖顺序全量同步")
+@router.post(
+    "/sync",
+    response_model=List[SyncResult],
+    summary="按依赖顺序全量同步",
+    dependencies=[Depends(require_api_key)],
+)
 def sync_all(request: Request, force: bool = Query(default=False)) -> List[SyncResult]:
     return _hub(request).sync_all(force=force)
 

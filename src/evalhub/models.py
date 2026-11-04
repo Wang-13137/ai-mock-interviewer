@@ -33,9 +33,24 @@ class EvalTask(str, Enum):
 
 
 class RunStatus(str, Enum):
+    """run 的生命周期。四个状态各自对应一种「事实」，不能合并：
+
+    · PENDING / RUNNING：异步提交后还没结论。**必须存在**——否则长任务在
+      HTTP 超时后就成了"幽灵 run"：数据库里没有它，而它还在烧 token；
+    · SUCCEEDED：产出了指标（是否可信另由 `trusted` 决定，两件事不能混）；
+    · FAILED：执行出错，保留 error 与已完成的部分（失败记录本身是排障依据）；
+    · REJECTED：前置条件不满足，**拒绝产出数字**——没有结果好过错误的结果。
+    """
+
+    PENDING = "pending"
+    RUNNING = "running"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     REJECTED = "rejected"        # 前置条件不满足，拒绝产出数字（而不是产出假数字）
+
+    @property
+    def is_terminal(self) -> bool:
+        return self in (RunStatus.SUCCEEDED, RunStatus.FAILED, RunStatus.REJECTED)
 
 
 class Verdict(str, Enum):
@@ -73,14 +88,34 @@ class MetricDelta(BaseModel):
     delta_pct: float
     higher_is_better: bool = True
     regressed: bool = False
+    # ---- 显著性（可选）----
+    # 能做配对 bootstrap 的指标会带上 95% CI；不能做的（如 kappa）留空，
+    # 判定退回点估计。**留空不等于"没问题"，reasons 里会写明原因。**
+    ci_low: Optional[float] = None
+    ci_high: Optional[float] = None
+    sample: int = 0                 # 参与重采样的配对样本数
+    method: str = "point"           # point | bootstrap
+    significant: Optional[bool] = None  # CI 是否整体偏离 0
+
+    def render_ci(self) -> str:
+        if self.ci_low is None or self.ci_high is None:
+            return "—"
+        return f"[{self.ci_low:+.4f}, {self.ci_high:+.4f}]"
 
 
 class GateResult(BaseModel):
-    """回归门禁结论。"""
+    """回归门禁结论。
+
+    两个阈值分工明确（历史上是一个参数兼任两种单位，语义是混的）：
+        · `abs_threshold` 防小 baseline 的相对放大（0.04→0.036 是 10%，但只有 1 条 case）；
+        · `threshold`（相对阈值）防大 baseline 的绝对钝化。
+    判定要求**两者同时超过**，再叠加 CI 显著性，宁可漏报也不误报。
+    """
 
     verdict: Verdict
     baseline_run: str = ""
-    threshold: float = 0.02
+    threshold: float = 0.02          # 相对阈值（保留字段名以兼容旧记录）
+    abs_threshold: float = 0.02      # 绝对阈值
     deltas: List[MetricDelta] = Field(default_factory=list)
     reasons: List[str] = Field(default_factory=list)
 
@@ -103,6 +138,11 @@ class EvalRunRecord(BaseModel):
     # 配置指纹：provider/model/strategy 等算 hash，只有指纹相同才可比
     config_fingerprint: str = ""
     fingerprint_detail: Dict[str, Any] = Field(default_factory=dict)
+    # ---- 溯源信息：只记录，**刻意不进 config_fingerprint** ----
+    # 进了指纹就等于"改了代码就不可比"，而门禁存在的意义恰恰是捕捉代码改动带来的变化。
+    # 它回答的是另一个问题：这个退步是哪次提交引入的。
+    code_version: str = ""
+    runtime: Dict[str, str] = Field(default_factory=dict)
     metrics: Dict[str, float] = Field(default_factory=dict)
     gate: Optional[GateResult] = None
     warnings: List[str] = Field(default_factory=list)
@@ -111,6 +151,13 @@ class EvalRunRecord(BaseModel):
     finished_at: str = ""
     duration_ms: float = 0.0
     cases: int = 0
+    # 异步 run 的可观测性：轮询方据此知道"还在跑"还是"卡住了"
+    stage: str = ""
+    progress: float = 0.0
+
+    @property
+    def status_text(self) -> str:
+        return f"{self.status.value}({self.stage})" if self.stage and not self.status.is_terminal else self.status.value
 
     def summary_line(self) -> str:
         tag = "可信" if self.trusted else "不可引用"

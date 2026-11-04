@@ -74,4 +74,13 @@ datahub:
 evalhub:
   enabled: true
   db_path: data/evalhub.db
-  gate_threshold: 0.02
+  # 退步判定要两个阈值同时满足：绝对差防小 baseline 的相对放大，相对差防大 baseline 的绝对钝化
+  gate_threshold: 0.02        # 相对阈值（2%）
+  gate_abs_threshold: 0.02    # 绝对阈值
+  bootstrap_iters: 1000       # 配对重采样次数；0 = 不做显著性检验（退回点估计）
+  max_concurrency: 2          # 同时跑的评测数，防互相抢 CPU / 烧额度
+  run_timeout_s: 1800         # 单次 run 硬超时，防幽灵 run
+
+# 写接口鉴权：空 = 不校验（仅本地开发）。服务对外可达时必须填。
+auth:
+  api_key: ""                 # 环境变量 AIMI_AUTH__API_KEY

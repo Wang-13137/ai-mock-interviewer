@@ -1,7 +1,7 @@
 [project]
 name = "ai-mock-interviewer"
 # 与 src/version.py 的 __version__ 保持一致；发版时两处同步 + 打同名 git tag
-version = "0.7.0"
+version = "0.8.0"
 description = "把本科毕设《VR + 语音的 AI 模拟面试官》重构为 Python + FastAPI 的 LLM 应用工程"
 readme = "README.md"
 requires-python = ">=3.10"

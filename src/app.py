@@ -166,6 +166,10 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         try:
             yield
         finally:
+            # 先取消还在跑的后台评测，再关客户端：顺序反了会让评测任务用已关闭的连接
+            hub = getattr(app.state, "evalhub", None)
+            if hub is not None:
+                await hub.aclose()
             await app.state.client.aclose()
 
     app = FastAPI(

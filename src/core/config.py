@@ -99,14 +99,39 @@ class DataHubConfig(BaseModel):
 class EvalHubConfig(BaseModel):
     """评测中台：任务编排、指标落库、与基线的回归门禁。
 
-    `gate_threshold` 是回归判定的默认阈值（相对跌幅，0.02 = 2 个百分点）。
-    设太小会天天报回归（噪声），设太大则真退步也发现不了；0.02 是在本项目
-    检索指标的量级（0.80 上下、样本 60 条）上，噪声与真实差异的实用分界。
+    两个阈值分工明确，判定要求**同时满足**：
+        · `gate_abs_threshold`：绝对差下限，防小 baseline 的相对放大
+          （0.04→0.036 是 10%，但只等于 60 条里 1 条 case 翻转）；
+        · `gate_threshold`：相对差下限，防大 baseline 的绝对钝化。
+    0.02 / 0.02 在本项目指标量级（0.80 上下、n=60）上是"业务可接受的最小退步"，
+    **不是统计显著性**——显著性由 `bootstrap_iters` 次的配对重采样单独判断。
+
+    `max_concurrency`：同时跑的评测数上限。评测吃 CPU（BM25 建索引）又烧额度（LLM），
+    无限并发只会让所有任务一起变慢。
+    `run_timeout_s`：单次 run 的硬超时。没有它会留下"幽灵 run"——库里没有结论，
+    而后台还在烧 token。默认 30 分钟，够跑 10 条生成评测。
     """
 
     enabled: bool = True
     db_path: str = "data/evalhub.db"
-    gate_threshold: float = 0.02
+    gate_threshold: float = 0.02          # 相对阈值
+    gate_abs_threshold: float = 0.02      # 绝对阈值
+    bootstrap_iters: int = 1000           # 重采样次数；2000 更稳但慢一倍
+    max_concurrency: int = 2
+    run_timeout_s: float = 1800.0
+
+
+class AuthConfig(BaseModel):
+    """写接口鉴权。
+
+    空字符串 = 不校验（本地开发与测试的默认）。**只要服务对外可达，就必须填。**
+    为什么不做完整 RBAC：这个项目规模下，把"谁都能触发评测并烧掉额度"堵上
+    已经能覆盖 90% 的风险，多租户/RBAC 属于没有用户量支撑的过度设计。
+    """
+
+    api_key: str = ""
+    # 受保护的写接口前缀（读接口默认公开，便于观察）
+    protect_prefixes: list[str] = Field(default_factory=lambda: ["/v1/eval", "/v1/data"])
 
 
 class Settings(BaseModel):
@@ -122,6 +147,7 @@ class Settings(BaseModel):
     memory: MemoryConfig = Field(default_factory=MemoryConfig)
     datahub: DataHubConfig = Field(default_factory=DataHubConfig)
     evalhub: EvalHubConfig = Field(default_factory=EvalHubConfig)
+    auth: AuthConfig = Field(default_factory=AuthConfig)
     prompts_dir: str = "config/prompts"
 
 

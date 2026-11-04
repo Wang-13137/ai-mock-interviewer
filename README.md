@@ -25,7 +25,7 @@
 | 记忆管理 `src/agent/memory.py` | ✅ | token 预算 + 滚动摘要，离线抽取式兜底 |
 | Docker | ✅ | slim 镜像（不装 torch，容器内默认 BM25），非 root + 健康检查 |
 
-测试：**179 passed**（pytest，全部离线替身，CI 免 Key）。
+测试：**197 passed**（pytest，全部离线替身，CI 免 Key）。
 
 ---
 
@@ -80,7 +80,7 @@ ai-mock-interviewer/
 │   ├── calibrate_min_score.py  # 向量检索阈值标定
 │   ├── smoke_platform.py       # 中台冒烟：同步 -> 跑评测 -> 与基线比较
 │   └── publish_evidence.py     # 把 reports/ 脱敏后发布到 docs/evidence/
-├── tests/                      # 179 个用例（全部离线替身，CI 免 Key）
+├── tests/                      # 197 个用例（全部离线替身，CI 免 Key）
 ├── docs/
 │   ├── RESULTS.md              # 对外数字唯一真值表（可外引 / 禁止外引）
 │   ├── datahub-evalhub.md      # 两个中台的设计取舍与面试问答
@@ -204,7 +204,7 @@ docker run -p 8000:8000 -e ZHIPU_API_KEY=你的key -e AIMI_LLM__PROVIDER=zhipu a
 
 ---
 
-## 八、数据中台与评测中台（v0.7）
+## 八、数据中台与评测中台（v0.8）
 
 加这两层不是为了「听起来大气」，而是因为项目里真实存在两个**静默失败**：
 
@@ -250,20 +250,60 @@ docker run -p 8000:8000 -e ZHIPU_API_KEY=你的key -e AIMI_LLM__PROVIDER=zhipu a
 而门禁**只允许 trusted run 之间比较**。于是「替身数字不得外引」从文档里的自觉，
 变成了系统层面的硬约束：拿替身分数当基线，门禁会直接拒绝。
 
-### 三条命令
+### 门禁不止比阈值，还比置信区间（v0.8）
+
+点估计比阈值是不够的：60 条样本的 Recall 标准误约 0.05，**0.02 的波动本来就在噪声里**。
+所以判退步要同时满足三条——方向变差、绝对差与相对差都超阈、**Δ 的 95% CI 不跨 0**：
+
+```
+$ python scripts/smoke_platform.py
+门禁结论：pass（基线 r-...-c207，阈值 绝对 0.020 / 相对 2.0%）
+  · 全部 9 个指标均未同时满足「方向变差 + 绝对差≥0.020 + 相对差≥2.0% + CI 显著」
+
+  指标                         基线       本次        变化  95% CI                 方向
+  mrr@10                 0.7672   0.7672     0.0%  [+0.0000, +0.0000]     越高越好
+  recall@3               0.7917   0.7917     0.0%  [+0.0000, +0.0000]     越高越好
+```
+
+同一个脚本还会**注入劣化 30%** 做反向验证——门禁最大的风险不是误报，
+而是"从来没报过警，没人知道它会不会报"：
+
+```
+门禁结论：regressed（阈值 绝对 0.020 / 相对 2.0%）
+  · mrr@10 从 0.7672 变为 0.4972（-35.2%），95% CI [-0.3833, -0.1567] 整体偏离 0
+```
+
+双侧都验过，这个门禁才算数：**不误报**（相同 run 判 pass、CI 全 0）、**不漏报**（劣化即报警）。
+
+### 平台化的五件"脏活"（v0.8）
+
+设计漂亮不等于能上线。这四件是真实项目一定会撞上的：
+
+| 问题 | 做法 |
+| --- | --- |
+| 长任务把 HTTP 拖死 | `POST /runs` 默认 **202 + run_id**，后台任务执行；状态机 `pending→running→succeeded/failed/rejected`，带 `stage`/`progress`，`run_timeout_s` 兜底防**幽灵 run** |
+| 并发烧额度 | `max_concurrency` 信号量；`prune` 保留策略（最近 N 条 + 最近 K 个可信基线，在跑的不删） |
+| 写接口裸奔 | `X-API-Key` 依赖（`hmac.compare_digest`），读接口公开；空 key 仅限本地 |
+| 指标追不到代码 | 记录 `code_version`（git sha，脏工作区加 `-dirty`）+ `runtime` 快照。**刻意不进指纹**——否则门禁就抓不到代码改动 |
+| 加字段就停服 | `PRAGMA table_info` + `ALTER TABLE` 轻量迁移，v0.7 老库直接升级可用（有测试守着） |
+
+### 几条命令
 
 ```bash
 python -m src.cli data ls                       # 数据资产 + 质量状态 + 谁引用谁
 python -m src.cli evals run --task retrieval --baseline latest   # 跑评测并和上次比
-python -m src.cli evals gate <run_id> --threshold 0.02           # 单独复核门禁
+python -m src.cli evals gate <run_id> --abs-threshold 0.02       # 单独复核门禁
+python -m src.cli evals prune --keep-last 50 --dry-run           # 保留策略演练
+python scripts/check_docs_drift.py              # 文档里的数字与实际是否一致（CI 会拦）
+python scripts/smoke_platform.py                # 端到端演示：pass + 注入劣化 regressed
 ```
 
 实测输出（BM25 默认配置，60 条标注 query，全离线）：
 
 ```
-run r-20261104-181927-2abd  status=succeeded  trusted=True
+run r-20261105-001019-c207  status=succeeded  trusted=True
+  code=022c884-dirty  dataset=retrieval_eval@<hash>
   mrr@10  0.7672   recall@3  0.7917   semantic_mrr@10  0.5511
-门禁结论：pass（基线 r-20261104-181741-aa5c，阈值 2.0%）
 ```
 
 > 注意这组是 **BM25** 的数字，和 `docs/RESULTS.md` 里 bge 语义检索的 0.825/0.829 不是一回事

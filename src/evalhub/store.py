@@ -59,6 +59,24 @@ CREATE INDEX IF NOT EXISTS idx_runs_task ON eval_runs(task, started_at);
 CREATE INDEX IF NOT EXISTS idx_cases_run ON eval_cases(run_id);
 """
 
+# v0.8 新增列。
+# 为什么需要显式迁移：`CREATE TABLE IF NOT EXISTS` 对**已存在的表不会加列**，
+# 老库升级后 INSERT 就会因为列不存在报错。真实项目的数据表只会越来越宽，
+# 没有迁移机制的中台，第一次加字段就是一次停服。
+MIGRATIONS: list[tuple[str, str]] = [
+    ("code_version", "ALTER TABLE eval_runs ADD COLUMN code_version TEXT DEFAULT ''"),
+    ("runtime", "ALTER TABLE eval_runs ADD COLUMN runtime TEXT DEFAULT '{}'"),
+    ("stage", "ALTER TABLE eval_runs ADD COLUMN stage TEXT DEFAULT ''"),
+    ("progress", "ALTER TABLE eval_runs ADD COLUMN progress REAL DEFAULT 0"),
+]
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(eval_runs)").fetchall()}
+    for column, ddl in MIGRATIONS:
+        if column not in cols:
+            conn.execute(ddl)
+
 
 class EvalHubStore:
     def __init__(self, db_path: str | Path) -> None:
@@ -66,6 +84,7 @@ class EvalHubStore:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         with self._conn() as conn:
             conn.executescript(SCHEMA)
+            _migrate(conn)
 
     @contextmanager
     def _conn(self) -> Iterator[sqlite3.Connection]:
@@ -83,14 +102,20 @@ class EvalHubStore:
                 """INSERT INTO eval_runs
                    (id, task, dataset_id, dataset_hash, status, verdict, trusted,
                     config_fingerprint, fingerprint_detail, metrics, warnings, error,
-                    started_at, finished_at, duration_ms, cases, gate)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    started_at, finished_at, duration_ms, cases, gate,
+                    code_version, runtime, stage, progress)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(id) DO UPDATE SET
+                     dataset_id=excluded.dataset_id,
+                     dataset_hash=excluded.dataset_hash,
                      status=excluded.status, verdict=excluded.verdict,
+                     trusted=excluded.trusted,
+                     config_fingerprint=excluded.config_fingerprint,
+                     fingerprint_detail=excluded.fingerprint_detail,
                      metrics=excluded.metrics, warnings=excluded.warnings,
                      error=excluded.error, finished_at=excluded.finished_at,
                      duration_ms=excluded.duration_ms, cases=excluded.cases,
-                     gate=excluded.gate""",
+                     gate=excluded.gate, stage=excluded.stage, progress=excluded.progress""",
                 (
                     record.id,
                     record.task,
@@ -109,6 +134,10 @@ class EvalHubStore:
                     record.duration_ms,
                     record.cases,
                     record.gate.model_dump_json() if record.gate else "",
+                    record.code_version,
+                    json.dumps(record.runtime, ensure_ascii=False),
+                    record.stage,
+                    record.progress,
                 ),
             )
 
@@ -183,9 +212,40 @@ class EvalHubStore:
                 (gate.verdict.value, gate.model_dump_json(), run_id),
             )
 
+    # ---------------- 保留策略 ---------------- #
+    def prune(self, keep_last: int = 50, keep_trusted: int = 20, dry_run: bool = False) -> Dict[str, Any]:
+        """按任务裁剪历史：保留最近 `keep_last` 条 + 最近 `keep_trusted` 个 trusted 基线。
+
+        为什么评测库需要保留策略：每次 run 都落库 + 落逐条明细，
+        60 条/次的规模下跑几百次就是几万行。列表查询与 CI 都会慢慢变慢，
+        而真正有价值的只有「最近的状态」和「可信基线」。**在跑的 run 永不删除。**
+        """
+        with self._conn() as conn:
+            tasks = [r["task"] for r in conn.execute("SELECT DISTINCT task FROM eval_runs").fetchall()]
+            keep: set[str] = set()
+            for task in tasks:
+                rows = conn.execute(
+                    "SELECT id, trusted FROM eval_runs WHERE task=? ORDER BY started_at DESC, rowid DESC",
+                    (task,),
+                ).fetchall()
+                keep.update(r["id"] for r in rows[: max(0, keep_last)])
+                keep.update([r["id"] for r in rows if r["trusted"]][: max(0, keep_trusted)])
+            all_rows = conn.execute("SELECT id, status FROM eval_runs").fetchall()
+            doomed = [
+                r["id"]
+                for r in all_rows
+                if r["id"] not in keep and r["status"] not in ("pending", "running")
+            ]
+            if doomed and not dry_run:
+                marks = ",".join("?" * len(doomed))
+                conn.execute(f"DELETE FROM eval_cases WHERE run_id IN ({marks})", doomed)
+                conn.execute(f"DELETE FROM eval_runs WHERE id IN ({marks})", doomed)
+        return {"deleted": len(doomed), "kept": len(keep), "dry_run": dry_run}
+
 
 def _row_to_record(row: sqlite3.Row) -> EvalRunRecord:
     gate_raw = row["gate"] or ""
+    keys = row.keys()
     return EvalRunRecord(
         id=row["id"],
         task=row["task"],
@@ -196,6 +256,8 @@ def _row_to_record(row: sqlite3.Row) -> EvalRunRecord:
         trusted=bool(row["trusted"]),
         config_fingerprint=row["config_fingerprint"] or "",
         fingerprint_detail=json.loads(row["fingerprint_detail"] or "{}"),
+        code_version=(row["code_version"] or "") if "code_version" in keys else "",
+        runtime=json.loads((row["runtime"] or "{}") if "runtime" in keys else "{}"),
         metrics=json.loads(row["metrics"] or "{}"),
         warnings=json.loads(row["warnings"] or "[]"),
         error=row["error"] or "",
@@ -203,5 +265,7 @@ def _row_to_record(row: sqlite3.Row) -> EvalRunRecord:
         finished_at=row["finished_at"] or "",
         duration_ms=row["duration_ms"] or 0.0,
         cases=row["cases"] or 0,
+        stage=(row["stage"] or "") if "stage" in keys else "",
+        progress=(row["progress"] or 0.0) if "progress" in keys else 0.0,
         gate=GateResult.model_validate_json(gate_raw) if gate_raw else None,
     )

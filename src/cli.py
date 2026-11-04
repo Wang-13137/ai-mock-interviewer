@@ -217,8 +217,23 @@ def cmd_evals(args: argparse.Namespace) -> None:
         return
 
     if args.action == "gate":
-        gate = hub.gate_run(args.run_id, baseline=args.baseline, threshold=args.threshold)
+        gate = hub.gate_run(
+            args.run_id,
+            baseline=args.baseline,
+            threshold=args.threshold,
+            abs_threshold=getattr(args, "abs_threshold", None),
+        )
         print(render_gate(gate))
+        return
+
+    if args.action == "prune":
+        result = hub.prune(
+            keep_last=args.keep_last,
+            keep_trusted=args.keep_trusted,
+            dry_run=args.dry_run,
+        )
+        verb = "将删除" if args.dry_run else "已删除"
+        print(f"{verb} {result['deleted']} 条 run，保留 {result['kept']} 条")
         return
 
     # run
@@ -231,6 +246,7 @@ def cmd_evals(args: argparse.Namespace) -> None:
     )
     record = asyncio.run(hub.run(req))
     print(f"\nrun {record.id}  status={record.status.value}  trusted={record.trusted}")
+    print(f"  code={record.code_version or '?'}  dataset={record.dataset_id}@{record.dataset_hash[:8]}")
     if record.error:
         print(f"  ✗ {record.error}")
     for k, v in sorted(record.metrics.items()):
@@ -300,8 +316,14 @@ def main(argv: Optional[list] = None) -> int:
     e_gate = e_sub.add_parser("gate", help="把已有 run 与基线比较")
     e_gate.add_argument("run_id")
     e_gate.add_argument("--baseline", default="latest")
-    e_gate.add_argument("--threshold", type=float, default=None)
+    e_gate.add_argument("--threshold", type=float, default=None, help="相对阈值（默认取配置）")
+    e_gate.add_argument("--abs-threshold", type=float, default=None, help="绝对阈值（默认取配置）")
     e_gate.set_defaults(func=cmd_evals)
+    e_prune = e_sub.add_parser("prune", help="裁剪历史 run（保留策略）")
+    e_prune.add_argument("--keep-last", type=int, default=50, help="每个任务保留最近 N 条")
+    e_prune.add_argument("--keep-trusted", type=int, default=20, help="每个任务保留最近 K 个可信基线")
+    e_prune.add_argument("--dry-run", action="store_true", help="只统计不删除")
+    e_prune.set_defaults(func=cmd_evals)
 
     args = parser.parse_args(argv)
     args.func(args)

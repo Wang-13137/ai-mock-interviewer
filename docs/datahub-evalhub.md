@@ -140,7 +140,7 @@ record.trusted = bool(result.trusted and snap.get("trusted_data"))
 门禁**只允许 trusted run 之间比较**。于是「不许引替身数字」从自觉变成了系统约束：
 拿替身分数当基线，门禁直接拒绝。
 
-### 3.5 门禁判定
+### 3.5 门禁判定（v0.8：三个条件同时满足）
 
 三道可比性检查（不过就 `incomparable`，绝不硬比）：
 
@@ -148,13 +148,52 @@ record.trusted = bool(result.trusted and snap.get("trusted_data"))
 2. `config_fingerprint` 相同；
 3. `dataset_hash` 相同 —— **数据换了指标当然会变**，这是最常见的假警报。
 
-比对逻辑：对共同数值指标算 `delta` 与 `delta_pct`，方向由指标名决定
-（`latency_ms` / `avg_steps` / `model_calls` 等越低越好），
-`abs(delta) >= 阈值` **或** `abs(delta_pct) >= 阈值` 即判退步。
-两个条件并列是因为：baseline 很小时（如 0.04）相对跌幅会放大到失真，baseline 很大时
-绝对差更直观。阈值默认 0.02（2 个百分点）。
+判定退步要同时满足三条：
 
-### 3.6 为什么要逐条明细
+| # | 条件 | 作用 |
+| --- | --- | --- |
+| 1 | 方向变差 | `latency_ms` / `avg_steps` / `model_calls` 等越低越好，其余越高越好 |
+| 2 | `abs(delta) >= 0.02` **且** `abs(delta_pct) >= 2%` | 绝对阈值防小 baseline 的相对放大，相对阈值防大 baseline 的绝对钝化 |
+| 3 | Δ 的 95% CI 不跨 0（有明细时） | 区分"数字动了"和"统计上真的变差了" |
+
+**v0.7 的写法是「绝对 or 相对」任一超阈即判退步，方向是错的。** 反例：baseline=0.04，
+连掉 1 条 case 变成 0.036，相对跌幅 10% 直接触发报警——而小 baseline 恰恰是噪声最响的地方。
+改成「且」之后，两个失真方向都被堵住。
+
+### 3.6 显著性：为什么必须做、怎么做
+
+60 条 query 的 Recall 标准误约 `sqrt(0.8*0.2/60) ≈ 0.05`。**0.02 的波动本来就在噪声里。**
+只比点估计的门禁只有两种结局：阈值松到抓不住退步，或者紧到天天误报；误报几次之后
+团队就会把它关掉——这比没有门禁更糟，因为它给了"我们有回归保护"的错觉。
+
+做法（`src/evalhub/bootstrap.py`）：
+
+1. **配对重采样**：两次 run 跑的是同一批 case，按 `case_id` 对齐后做差，
+   把"这条 query 本身就难"的方差消掉，检出力显著高于两独立样本；
+2. **还原校验**：明细里的字段名与汇总指标名不总是一一对应（`mrr@10` ← `rr`，
+   `hit@1` ← `rr>=1`）。先验证"明细重建均值 ≈ 落库指标"（容差 0.02），
+   对不上就**放弃检验**并写进 reasons——宁可说"这次判不了显著"，也不给假结论；
+3. **不能重建的指标**（如 kappa/QWK，它们不是逐条均值）退回点估计，并在 reasons 里明说；
+4. **判 pass 时也留痕**：把"跌了但 CI 跨 0"的指标逐条写进 reasons，
+   因为使用者必须能区分"真的没退步"和"门禁没看见"。
+
+实测（`scripts/smoke_platform.py`，全部可复现）：
+
+| 场景 | 结论 | CI 表现 |
+| --- | --- | --- |
+| 同配置连跑两次 | `pass` | 9 个指标的 CI 全为 `[0, 0]` |
+| 注入劣化 30%（每 10 条打坏 3 条） | `regressed` | 7 个指标 CI 整体为负，如 `mrr@10 [-0.383, -0.157]` |
+
+第二行是刻意加的**反向验证**：门禁最大的风险不是误报，而是"从来没报过警，
+没人知道它会不会报警"。注入数据不可外引，只用于证明判定逻辑有效。
+
+### 3.7 为什么要逐条明细
+
+指标退步 0.02 只是症状。要改代码得知道**是哪些 query 掉的**。所以 `eval_cases` 表存每条明细
+（query / relevant / retrieved / rr / kind）。没有明细的评测只能证明「变差了」，
+不能定位「哪里差」，等于没有归因能力。
+
+v0.8 之后明细还多了一个用途：**它们是配对 bootstrap 的样本**。没有明细，门禁就只能比点估计。
 
 指标退步 0.02 只是症状。要改代码得知道**是哪些 query 掉的**。所以 `eval_cases` 表存每条明细
 （query / relevant / retrieved / rr / kind）。没有明细的评测只能证明「变差了」，
@@ -168,15 +207,37 @@ record.trusted = bool(result.trusted and snap.get("trusted_data"))
 GET  /v1/data/datasets                     数据资产列表（含质量状态、被引用）
 GET  /v1/data/datasets/{id}                详情（版本数、dirty、latest）
 GET  /v1/data/datasets/{id}/quality        最新版本质量报告
-POST /v1/data/sync[?force=true]            按依赖顺序全量同步
+POST /v1/data/sync[?force=true]            按依赖顺序全量同步          [写，需 Key]
 GET  /v1/data/lineage                      血缘
 GET  /v1/data/snapshot/{id}                评测可用的数据快照
 
 GET  /v1/eval/tasks                        可用任务
-POST /v1/eval/runs                         {task, dataset_id, params, baseline_run}
+POST /v1/eval/runs[?wait=true]             提交评测。默认 202 + run_id（异步）；    [写，需 Key]
+                                           wait=true 阻塞到终态并返回 200
 GET  /v1/eval/runs[?task=&limit=&trusted_only=]
 GET  /v1/eval/runs/{id}[/cases]            详情 / 逐条明细
-POST /v1/eval/runs/{id}/gate?baseline=latest
+GET  /v1/eval/runs/{id}/progress           轻量进度（status/stage/progress）
+POST /v1/eval/runs/{id}/gate?baseline=latest[&threshold=&abs_threshold=]         [写，需 Key]
+POST /v1/eval/prune?keep_last=50&keep_trusted=20&dry_run=false                   [写，需 Key]
+```
+
+写接口带 `[写，需 Key]` 的，在 `auth.api_key` 非空时必须带 `X-API-Key` 头，
+否则 401。读接口保持公开——观察不该需要钥匙。
+
+### 异步 run 的完整用法
+
+```bash
+# 1. 提交，拿到 run_id（立刻返回，不等）
+curl -s -X POST localhost:8000/v1/eval/runs \
+  -H 'Content-Type: application/json' -H "X-API-Key: $KEY" \
+  -d '{"task":"generation","params":{"limit":10}}'
+# -> 202 {"id":"r-20261105-...","status":"pending","stage":"queued",...}
+
+# 2. 轮询（stage 会走 queued -> binding_dataset -> running_task -> gating）
+curl -s localhost:8000/v1/eval/runs/r-20261105-.../progress
+
+# 3. 跑完看结论
+curl -s localhost:8000/v1/eval/runs/r-20261105-...
 ```
 
 ```bash
@@ -185,8 +246,10 @@ python -m src.cli data sync --dataset retrieval_eval
 python -m src.cli data lineage
 python -m src.cli evals run --task retrieval --baseline latest
 python -m src.cli evals ls --task retrieval
-python -m src.cli evals gate <run_id> --threshold 0.02
-python scripts/smoke_platform.py            # 端到端演示，无需 Key
+python -m src.cli evals gate <run_id> --threshold 0.02 --abs-threshold 0.02
+python -m src.cli evals prune --keep-last 50 --dry-run
+python scripts/smoke_platform.py            # 端到端演示（含注入劣化对照），无需 Key
+python scripts/check_docs_drift.py          # 文档数字与真实用例数是否一致
 ```
 
 `baseline_run="latest"` 是实用约定：自动取同任务下最近一个 trusted run 作基线，
@@ -202,10 +265,17 @@ CI 里不需要人工记 run id。
    所以它被标 `trusted=false`，且不能作基线。
 3. **人工标注只覆盖 10 条中的 0 条**（`eval_set`），所以 kappa/QWK 目前算不出来。
    中台的 `human_labels_incomplete` warning 就是在提醒这件事。
-4. **没有 CI 接线**：门禁能力已有，但还没在 GitHub Actions 里按 PR 触发。
-5. **配置指纹不包含代码版本**：改了 `retriever.py` 的实现但配置不变时，指纹相同、会被判可比。
-   这正是我们想要的行为（代码改动本来就该被门禁发现），但如果改动是「重构但等价」，
-   也会产生一次「无变化」的 PASS——这是可接受的。
+4. **配置指纹不包含代码版本**：改了 `retriever.py` 的实现但配置不变时，指纹相同、会被判可比。
+   这正是我们想要的行为（代码改动本来就该被门禁发现）。`code_version` 单独记录但不参与判定，
+   用途是事后归因——把两个 run 的 sha 一对比就知道该看哪几条 commit。
+5. **后台任务是进程内的**：进程被 kill 时，正在跑的 run 会停在 `running`（有 `run_timeout_s`
+   兜底但不会自动恢复）。要跨进程恢复必须上任务队列（Celery/RQ/arq），当前规模不值得。
+6. **SQLite 单写者**：每次落库都是新连接 + commit，写并发靠 10s lock 兜底。单机评测没问题，
+   多机部署时需要换成 Postgres —— 但那时真正该换的是整个持久层，不只是这张表。
+7. **没有告警**：门禁判 `regressed` 只是落库，不会通知任何人。CI 化的下一步是
+   "PR 里跑 retrieval 评测 + regressed 时阻断合并"，这需要先有 CI 里可复现的基线。
+8. **回归门禁尚未按 PR 触发**：`scripts/check_docs_drift.py` 已接 CI，但评测门禁还没接——
+   它的前置条件是"CI 里有稳定基线与固定评测集"，属于下一阶段。
 
 ---
 
