@@ -166,7 +166,7 @@ def cmd_data(args: argparse.Namespace) -> None:
     hub = DataHub(load_settings())
 
     if args.action == "sync":
-        targets = [args.dataset] if args.dataset else [s.id for s in hub.list_datasets()]
+        targets = [args.dataset] if args.dataset else [r.spec.id for r in hub.list_datasets()]
         for dataset_id in targets:
             r = hub.sync(dataset_id, force=args.force)
             mark = {"registered": "✅", "unchanged": "＝", "blocked": "⛔", "missing": "❓"}.get(r.status, "?")

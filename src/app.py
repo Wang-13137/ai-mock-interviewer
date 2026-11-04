@@ -153,6 +153,8 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
                     log.warning("数据质量门禁拦截：%s（这些数据集当前没有可用版本）", blocked)
                 if cfg.evalhub.enabled:
                     app.state.evalhub = EvalHub(cfg, datahub)
+                    # 上次进程若带着未完成的 run 退出，它们已无从恢复——如实标记，不留假象
+                    app.state.evalhub.recover_stale_runs()
                     log.info("evalhub 就绪：%d 个任务", len(app.state.evalhub.tasks()))
             except Exception as exc:
                 log.error("数据中台初始化失败，数据/评测路由将不可用：%s", exc)

@@ -252,6 +252,26 @@ python scripts/smoke_platform.py            # 端到端演示（含注入劣化�
 python scripts/check_docs_drift.py          # 文档数字与真实用例数是否一致
 ```
 
+### 4.1 人工标注工作流（kappa/QWK 的前置条件）
+
+裁判与人工的一致性是生成侧一切数字的可信度来源，而它需要 n≥30 的人工分。
+工具链把「标注」从一句口号变成了三条命令：
+
+```bash
+python scripts/export_labeling_sheet.py                     # 1. 导出 CSV（Excel 可开，含 rubric 说明）
+#    人工在 human_score 列填 1-5（评分标准见 docs/labeling/评分标准.md）
+python scripts/import_human_labels.py docs/labeling/eval-set-标注表.csv
+                                                            # 2. 校验并写回 eval_set（非法分/重复 id 直接拦截）
+python -m src.cli data sync                                 # 3. 新版本登记 + 质量门禁
+python -m src.cli evals run --task generation --baseline latest
+                                                            # 4. 跑评测，报告直接给出 kappa / QWK
+```
+
+为什么是 CSV 而不是在线表格：`human_score` 是数据集的一部分，参与 content_hash
+版本管理，CSV 是最小的可版本化载体。为什么是 30 条：n<30 时 kappa 会因
+基础率不平衡而不可解读（kappa paradox），30 是最低可用样本量。
+
+
 `baseline_run="latest"` 是实用约定：自动取同任务下最近一个 trusted run 作基线，
 CI 里不需要人工记 run id。
 
@@ -263,13 +283,15 @@ CI 里不需要人工记 run id。
    不是「会话可恢复」——后者是下一步。
 2. **`agent` 任务在替身模式下 tool_call_rate 恒为 0**，这不是能力结论，是替身行为。
    所以它被标 `trusted=false`，且不能作基线。
-3. **人工标注只覆盖 10 条中的 0 条**（`eval_set`），所以 kappa/QWK 目前算不出来。
-   中台的 `human_labels_incomplete` warning 就是在提醒这件事。
+3. **人工标注覆盖 30 条中的 0 条**（`eval_set` 已扩到 30 条，但分数还没标），
+   所以 kappa/QWK 目前算不出来。中台的 `human_labels_incomplete` warning 就是在提醒这件事。
+   标注工作流已就绪（见 4.1），标满 30 条后裁判一致性的数字就能第一次落地。
 4. **配置指纹不包含代码版本**：改了 `retriever.py` 的实现但配置不变时，指纹相同、会被判可比。
    这正是我们想要的行为（代码改动本来就该被门禁发现）。`code_version` 单独记录但不参与判定，
    用途是事后归因——把两个 run 的 sha 一对比就知道该看哪几条 commit。
-5. **后台任务是进程内的**：进程被 kill 时，正在跑的 run 会停在 `running`（有 `run_timeout_s`
-   兜底但不会自动恢复）。要跨进程恢复必须上任务队列（Celery/RQ/arq），当前规模不值得。
+5. **后台任务是进程内的**：进程被 kill 时，正在跑的 run 停在 `running`。启动时
+   `recover_stale_runs()` 会把残留的 pending/running 如实标为 failed（有测试守着），
+   但**执行本身不会跨进程恢复**——要恢复必须上任务队列（Celery/RQ/arq），当前规模不值得。
 6. **SQLite 单写者**：每次落库都是新连接 + commit，写并发靠 10s lock 兜底。单机评测没问题，
    多机部署时需要换成 Postgres —— 但那时真正该换的是整个持久层，不只是这张表。
 7. **没有告警**：门禁判 `regressed` 只是落库，不会通知任何人。CI 化的下一步是

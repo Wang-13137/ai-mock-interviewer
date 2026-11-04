@@ -117,6 +117,18 @@ class EvalHub:
     def prune(self, keep_last: int = 50, keep_trusted: int = 20, dry_run: bool = False) -> Dict[str, Any]:
         return self.store.prune(keep_last=keep_last, keep_trusted=keep_trusted, dry_run=dry_run)
 
+    def recover_stale_runs(self) -> List[str]:
+        """启动时清扫僵尸 run：上次进程退出时停在 pending/running 的记录。
+
+        后台任务在进程内存里，进程没了任务就没了——但落库的状态还停在
+        「运行中」。不清扫的话，这些僵尸会永远占着"在跑"的假象，
+        还可能干扰 baseline=latest 的取数。在 EvalHub 初始化时调用一次。
+        """
+        ids = self.store.mark_stale_runs()
+        if ids:
+            log.warning("evalhub 清扫僵尸 run：%d 条标记为 failed：%s", len(ids), ids)
+        return ids
+
     # ---------------- 数据快照 ---------------- #
     def _prepare_dataset(self, dataset_id: str) -> Dict[str, Any]:
         snap = self.datahub.snapshot(dataset_id)

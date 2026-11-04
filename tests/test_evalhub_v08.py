@@ -327,3 +327,36 @@ def test_prune_never_deletes_running(tmp_path: Path):
         store.save_run(EvalRunRecord(id=f"r{i}", task="retrieval", status=RunStatus.SUCCEEDED))
     store.prune(keep_last=1, keep_trusted=0)
     assert store.get_run("r-run") is not None, "在跑的 run 被删掉就等于丢了正在烧的钱"
+
+
+# --------------------------------------------------------------------------- #
+# 6. 僵尸 run 清扫
+# --------------------------------------------------------------------------- #
+def test_recover_stale_runs_marks_non_terminal_failed(repo):
+    """进程重启后，pending/running 已无人执行——必须如实标记，不能留"在跑"的假象。"""
+    hub = repo()
+    # 模拟上次进程崩溃留下的现场：一条 pending、一条 running、一条已终态
+    stale_pending = EvalRunRecord(id="r-stale-p", task="retrieval", status=RunStatus.PENDING)
+    stale_running = EvalRunRecord(id="r-stale-r", task="retrieval", status=RunStatus.RUNNING)
+    done = EvalRunRecord(id="r-done", task="retrieval", status=RunStatus.SUCCEEDED, trusted=True)
+    for rec in (stale_pending, stale_running, done):
+        hub.store.save_run(rec)
+
+    ids = hub.recover_stale_runs()
+
+    assert set(ids) == {"r-stale-p", "r-stale-r"}
+    for rid in ("r-stale-p", "r-stale-r"):
+        rec = hub.get_run(rid)
+        assert rec.status is RunStatus.FAILED
+        assert "进程重启" in rec.error, "必须写清为什么失败，而不是留一个莫名其妙的 failed"
+        assert rec.finished_at, "终态必须有时间戳"
+    assert hub.get_run("r-done").status is RunStatus.SUCCEEDED, "终态 run 不能被误伤"
+
+
+def test_recover_stale_runs_idempotent_and_quiet(repo):
+    """没有僵尸时应是无操作；重复调用不报错（幂等）。"""
+    hub = repo()
+    assert hub.recover_stale_runs() == []
+    hub.store.save_run(EvalRunRecord(id="r-z", task="retrieval", status=RunStatus.PENDING))
+    assert hub.recover_stale_runs() == ["r-z"]
+    assert hub.recover_stale_runs() == [], "第二次清扫不该再捞出已处理的"

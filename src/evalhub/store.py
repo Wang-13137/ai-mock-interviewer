@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
 
@@ -241,6 +242,31 @@ class EvalHubStore:
                 conn.execute(f"DELETE FROM eval_cases WHERE run_id IN ({marks})", doomed)
                 conn.execute(f"DELETE FROM eval_runs WHERE id IN ({marks})", doomed)
         return {"deleted": len(doomed), "kept": len(keep), "dry_run": dry_run}
+
+    def mark_stale_runs(self, reason: str = "") -> List[str]:
+        """把所有非终态 run 落为 failed，返回被清理的 run id 列表。
+
+        为什么需要这一步：后台任务活在进程内存里，进程被 kill / 崩溃后，
+        `pending`/`running` 的 run 永远等不到执行者——它们不是「还在跑」，
+        而是永远不会跑。不清理的后果是 `baseline=latest` 之类的逻辑可能
+        被一条僵尸 run 卡住，而且列表页会一直显示假象。启动时清扫一次，
+        比「假装它们还在跑」诚实。
+        """
+        err = reason or "进程重启：这个 run 在进程退出前未完成，无从恢复，标记为失败（没有产出任何数字）"
+        now = datetime.now().isoformat(timespec="seconds")
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT id FROM eval_runs WHERE status IN ('pending', 'running')"
+            ).fetchall()
+            ids = [r["id"] for r in rows]
+            if ids:
+                conn.execute(
+                    """UPDATE eval_runs
+                       SET status='failed', error=?, stage='', finished_at=?
+                       WHERE status IN ('pending', 'running')""",
+                    (err, now),
+                )
+        return ids
 
 
 def _row_to_record(row: sqlite3.Row) -> EvalRunRecord:

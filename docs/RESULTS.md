@@ -30,10 +30,10 @@
 | 重排在早期 30 条集上 MRR **0.883→0.828**（故 `rag.rerank=none` 默认关闭） | 早期集 22 literal + 8 semantic | `docs/evidence/retrieval-bge-80.{md,json}`、`retrieval-rerank-80.{md,json}` |
 | 「结论随评测集难度翻转」：30 条简单集纯向量反超，补 22 条字面零重叠语义难例后 hybrid 反超，最终扩到 60 条 | 评测集构成，不是模型改动 | 上述四份报告按时间顺序 |
 | 非负 IDF 变体、`min_score` 阈值、中文 bigram、RRF 融合 | 代码实现，非效果数字 | `src/rag/{bm25,vector,tokenize,fusion}.py` |
-| pytest **197 passed** | **测试用例数量**，全部跑在离线替身 / `httpx.MockTransport` 上 | `tests/`、`.github/workflows/ci.yml` |
+| pytest **199 passed** | **测试用例数量**，全部跑在离线替身 / `httpx.MockTransport` 上 | `tests/`、`.github/workflows/ci.yml` |
 
 > 引用纪律：语料仅 80 条，**Recall@k 绝对值没有普适参考价值**，只能讲「同一份标注上哪个策略相对更好」。
-> 「197 passed」只能说成「179 个自动化用例」，**不得说成「真实模型端到端验证」**。
+> 「199 passed」只能说成「179 个自动化用例」，**不得说成「真实模型端到端验证」**。
 
 ### 本表自身的维护规则（防止真值表过期）
 

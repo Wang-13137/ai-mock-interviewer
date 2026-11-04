@@ -25,7 +25,7 @@
 | 记忆管理 `src/agent/memory.py` | ✅ | token 预算 + 滚动摘要，离线抽取式兜底 |
 | Docker | ✅ | slim 镜像（不装 torch，容器内默认 BM25），非 root + 健康检查 |
 
-测试：**197 passed**（pytest，全部离线替身，CI 免 Key）。
+测试：**199 passed**（pytest，全部离线替身，CI 免 Key）。
 
 ---
 
@@ -80,7 +80,7 @@ ai-mock-interviewer/
 │   ├── calibrate_min_score.py  # 向量检索阈值标定
 │   ├── smoke_platform.py       # 中台冒烟：同步 -> 跑评测 -> 与基线比较
 │   └── publish_evidence.py     # 把 reports/ 脱敏后发布到 docs/evidence/
-├── tests/                      # 197 个用例（全部离线替身，CI 免 Key）
+├── tests/                      # 199 个用例（全部离线替身，CI 免 Key）
 ├── docs/
 │   ├── RESULTS.md              # 对外数字唯一真值表（可外引 / 禁止外引）
 │   ├── datahub-evalhub.md      # 两个中台的设计取舍与面试问答
