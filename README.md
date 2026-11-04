@@ -17,12 +17,12 @@
 | 服务骨架 `src/app.py` | ✅ | FastAPI + SSE 流式，统一 OpenAI 兼容客户端（智谱/硅基/DeepSeek/OpenAI 四家预设）+ 离线替身 |
 | 时延基准 `scripts/bench.py` | ✅ 脚本就位 | 非流式 vs SSE 的 TTFT/P50/P95 对比；**等真实 Key 实测** |
 | 评测体系 `src/eval/` | ✅ 地基就位 | LLM-as-judge + kappa/QWK 一致性 + 多指标强制同报 |
-| Agent 循环 `src/agent/` | ✅ | 手写 tool-call 协议 + 工具注册表 + 会话状态 + 三道防线 |
+| Agent 循环 `src/agent/` | ✅ | **双轨协议**（native function calling + 手写 ```tool 兜底）+ 工具注册表 + 会话状态 + 三道防线 |
 | 检索层 `src/rag/` | ✅ **真实语义模型** | BM25 / 向量（bge-small-zh）/ RRF 混合三策略 + 标定过的阈值 + 实测后默认关闭的重排 |
 | 记忆管理 `src/agent/memory.py` | ✅ | token 预算 + 滚动摘要，离线抽取式兜底 |
 | Docker | ✅ | slim 镜像（不装 torch，容器内默认 BM25），非 root + 健康检查 |
 
-测试：**135 passed**（pytest）。
+测试：**139 passed**（pytest）。
 
 ---
 
@@ -44,10 +44,10 @@ ai-mock-interviewer/
 │   ├── clients/llm.py          # OpenAI 兼容客户端（手写 SSE 解析）+ 离线替身 EchoClient
 │   ├── prompts/interviewer.py  # 面试官 System Prompt
 │   ├── agent/
-│   │   ├── protocol.py         # ```tool 代码块协议，宽松解析 + 坏格式回喂
+│   │   ├── protocol.py         # 工具协议：手写 ```tool 解析（兜底）+ ToolSpec→OpenAI tools 转换
 │   │   ├── tools.py            # 工具注册表 + 四个种子工具
 │   │   ├── state.py            # 会话状态（asyncio 锁，接口按 Redis 预留）
-│   │   ├── loop.py             # 手写 ReAct 循环 + 三道防线 + summarize_runs
+│   │   ├── loop.py             # 手写 ReAct 循环 + native/handwritten 双轨提取 + 三道防线 + summarize_runs
 │   │   └── memory.py           # 滚动摘要记忆（W5）
 │   ├── rag/
 │   │   ├── tokenize.py         # 中文 bigram / 英文词级（禁中文单字）
@@ -178,6 +178,16 @@ docker run -p 8000:8000 -e ZHIPU_API_KEY=你的key -e AIMI_LLM__PROVIDER=zhipu a
 
 四家都是 OpenAI 兼容协议，共用一份 `OpenAICompatClient`。
 环境变量覆盖：`AIMI_` 前缀 + 双下划线分层，如 `AIMI_RAG__STRATEGY=hybrid`。
+
+### Agent 工具调用协议
+
+`agent.protocol` 控制工具怎么交给模型，两条路径共用同一套执行 / 死循环检测 / 步数上限逻辑：
+
+- `native`（默认）：把工具以 OpenAI `tools` 参数下发，由模型自行决定是否调用，格式由 API 保证合法；
+- `handwritten`：把工具写成 ```tool 代码块塞进 system 提示词，自解析、可统计格式故障率，作为兼容免费额度模型与评测对照的兜底。
+
+两条路径在 `AgentLoop._extract_call` 统一归一成内部 `ToolCall`。
+环境变量可覆盖：`AIMI_AGENT__PROTOCOL=handwritten`。
 
 ---
 
