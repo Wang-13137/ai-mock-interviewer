@@ -185,6 +185,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             bank=request.app.state.bank,
             max_steps=cfg.agent.max_steps,
             memory=_build_memory(client, cfg),
+            protocol=cfg.agent.protocol,
         )
 
         run = await loop.run(

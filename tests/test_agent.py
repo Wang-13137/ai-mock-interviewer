@@ -11,11 +11,16 @@ import json
 import pytest
 
 from src.agent.loop import AgentLoop, summarize_runs
-from src.agent.protocol import ToolCallParseError, parse_tool_call, try_parse_tool_call
+from src.agent.protocol import (
+    ToolCallParseError,
+    parse_tool_call,
+    tool_specs_to_openai,
+    try_parse_tool_call,
+)
 from src.agent.state import SessionStore
 from src.agent.tools import ToolContext, ToolRegistry, ToolSpec, build_default_registry, load_question_bank
-from src.clients.llm import BaseLLMClient, LLMResult, LLMUsage
-from src.schemas.agent import AgentStep
+from src.clients.llm import BaseLLMClient, LLMResult, LLMUsage, OpenAICompatClient
+from src.schemas.agent import AgentStep, ToolCall
 
 
 # --------------------------------------------------------------------------- #
@@ -346,3 +351,89 @@ def test_registry_rejects_duplicate_name():
     reg.register(spec, lambda a, c: "ok")
     with pytest.raises(ValueError):
         reg.register(spec, lambda a, c: "dup")
+
+
+# --------------------------------------------------------------------------- #
+# 三、原生 function calling 路径（native protocol）
+# --------------------------------------------------------------------------- #
+class NativeScriptedClient(BaseLLMClient):
+    """假客户端：直接回吐预设的 LLMResult（含原生 tool_calls），用于验证 native 路径。"""
+
+    provider_name = "native-scripted"
+    ready = True
+
+    def __init__(self, results):
+        self._results = list(results)
+        self.prompts = []
+        self.last_tools = None
+
+    async def achat(self, messages, *, temperature=None, max_tokens=None, tools=None) -> LLMResult:
+        self.prompts.append([dict(m) for m in messages])
+        self.last_tools = tools
+        return self._results.pop(0) if self._results else LLMResult(content="好的，继续。", finish_reason="stop")
+
+    async def astream(self, messages, *, temperature=None, max_tokens=None, tools=None):
+        yield ""
+
+
+def test_tool_specs_to_openai():
+    out = tool_specs_to_openai(
+        [ToolSpec(name="demo", description="d", parameters={"properties": {"q": {"type": "string"}}})]
+    )
+    assert out[0] == {
+        "type": "function",
+        "function": {
+            "name": "demo",
+            "description": "d",
+            "parameters": {"type": "object", "properties": {"q": {"type": "string"}}},
+        },
+    }
+
+
+def test_parse_tool_calls_from_message():
+    raw = [
+        {
+            "id": "c1",
+            "type": "function",
+            "function": {"name": "search_question_bank", "arguments": '{"query": "RAG"}'},
+        }
+    ]
+    calls = OpenAICompatClient._parse_tool_calls(raw)
+    assert len(calls) == 1
+    assert calls[0].name == "search_question_bank"
+    assert calls[0].arguments == {"query": "RAG"}
+    # 缺 name 的条目被跳过；空 / None 返回空列表
+    assert OpenAICompatClient._parse_tool_calls(None) == []
+    assert OpenAICompatClient._parse_tool_calls([]) == []
+    # arguments 解析失败退化为空 dict（交给 registry.validate 报缺参并自纠），不直接崩
+    bad = OpenAICompatClient._parse_tool_calls([{"function": {"name": "x", "arguments": "{坏"}}])
+    assert bad[0].name == "x" and bad[0].arguments == {}
+
+
+async def test_agent_native_executes_tool_call(bank):
+    # 第一轮：模型以原生 tool_calls 调用 save_candidate_note；第二轮：给终答
+    res1 = LLMResult(
+        content="",
+        finish_reason="tool_calls",
+        tool_calls=[ToolCall(name="save_candidate_note", arguments={"note": "候选人提到 McNemar 检验"})],
+    )
+    res2 = LLMResult(content="我们深入聊聊这个项目。", finish_reason="stop")
+    client = NativeScriptedClient([res1, res2])
+    loop = AgentLoop(client, build_default_registry(), SessionStore(), bank, max_steps=3, protocol="native")
+    run = await loop.run([{"role": "user", "content": "我叫小王"}], session_id="nat-1")
+    assert run.tool_calls == 1
+    assert run.tool_errors == 0
+    assert run.stopped == "final"
+    # native 模式下工具清单确实以 tools 参数下发了
+    assert client.last_tools is not None
+    assert any(t["function"]["name"] == "save_candidate_note" for t in client.last_tools)
+
+
+async def test_agent_native_no_tool_call_is_final(bank):
+    # 模型不调工具、直接给自然语言终答，native 模式应正常结束（不触发手写解析）
+    res = LLMResult(content="你好，我们开始面试。", finish_reason="stop")
+    client = NativeScriptedClient([res])
+    loop = AgentLoop(client, build_default_registry(), SessionStore(), bank, max_steps=3, protocol="native")
+    run = await loop.run([{"role": "user", "content": "hi"}], session_id="nat-2")
+    assert run.tool_calls == 0
+    assert run.stopped == "final"

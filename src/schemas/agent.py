@@ -4,12 +4,11 @@
 放在 schemas 层是为了避免循环依赖：src/agent/* 可以 import 这里，
 API 层（src/app.py）也能直接把 AgentRun 作为响应体返回。
 
-设计取舍：**手写结构化协议，不依赖厂商原生 function calling**。
-原因有三，也是简历里能讲的点：
-1. 免费额度的模型（GLM-4-Flash / DeepSeek / Qwen）工具调用支持度参差不齐，
-   自建协议让「换 provider 不用改业务代码」这条承诺继续成立；
-2. 自己解析才知道模型**怎么坏**——漏引号、中文标点、代码块嵌套，这些都能被统计成故障率；
-3. 手写过一遍，再迁移到 LangGraph / 原生 tools 时是「重构」而不是「照抄」。
+设计取舍：**手写结构化协议 + 厂商原生 function calling 双轨并存**。
+- 手写协议（```tool 代码块）保证对免费额度模型的兼容性与可观测性（格式怎么坏都能统计）；
+- native 协议把工具以 OpenAI `tools` 参数下发，由模型自行决定是否调用，格式由 API 保证合法；
+- 两条路径在 loop 里统一归一成 `ToolCall`，共用同一套执行 / 死循环检测 / 步数上限逻辑。
+`AgentConfig.protocol` 字段切换默认走哪条；默认 native（更稳定），handwritten 作为兜底与评测对照。
 """
 
 from __future__ import annotations

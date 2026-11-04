@@ -207,3 +207,31 @@ def parse_tool_call(text: str) -> Optional[ToolCall]:
     if err:
         raise err
     return call
+
+
+# --------------------------------------------------------------------------- #
+# 原生 function calling 的工具清单转换
+# --------------------------------------------------------------------------- #
+def tool_spec_to_openai(spec: "ToolSpec") -> Dict[str, Any]:
+    """把一个 ToolSpec 转成 OpenAI `/chat/completions` 的 `tools[].function` 结构。
+
+    ToolSpec 本身就是 JSON Schema（name / description / parameters 含 type/properties/required），
+    所以只需套一层 `{"type": "function", "function": {...}}`。转换后交给 LLM 客户端以 `tools`
+    参数下发，由模型自行决定是否调用——与手写代码块协议互补。
+    """
+    params = spec.parameters or {}
+    if not params.get("type"):
+        params = {**params, "type": "object"}
+    return {
+        "type": "function",
+        "function": {
+            "name": spec.name,
+            "description": spec.description,
+            "parameters": params,
+        },
+    }
+
+
+def tool_specs_to_openai(specs: List["ToolSpec"]) -> List[Dict[str, Any]]:
+    """批量转换。"""
+    return [tool_spec_to_openai(s) for s in specs]

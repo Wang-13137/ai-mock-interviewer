@@ -18,9 +18,30 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 import httpx
 from pydantic import BaseModel, Field
 
+from ..schemas.agent import ToolCall
+
 log = logging.getLogger("aimi.llm")
 
 Message = Dict[str, str]
+
+
+def _coerce_arguments(raw: Any) -> Dict[str, Any]:
+    """API 里 tool_calls 的 arguments 是 JSON 字符串；解析失败退化为空 dict。"""
+    if raw is None:
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s:
+            return {}
+        try:
+            parsed = json.loads(s)
+            return parsed if isinstance(parsed, dict) else {}
+        except json.JSONDecodeError:
+            log.debug("丢弃无法解析的 tool_calls arguments: %s", s[:120])
+            return {}
+    return {}
 
 
 class LLMUsage(BaseModel):
@@ -38,6 +59,9 @@ class LLMResult(BaseModel):
     content: str = ""
     finish_reason: Optional[str] = None
     usage: Optional[LLMUsage] = None
+    # 原生 function calling：模型在 message.tool_calls 里返回的结构化调用。
+    # 手写协议（```tool 代码块）走 content 文本解析，这里为空。两者互斥、由 loop 统一归一成 ToolCall。
+    tool_calls: List[ToolCall] = Field(default_factory=list)
 
 
 class LLMError(RuntimeError):
@@ -67,6 +91,7 @@ class BaseLLMClient(ABC):
         *,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> LLMResult:
         ...
 
@@ -140,14 +165,20 @@ class OpenAICompatClient(BaseLLMClient):
         temperature: Optional[float],
         max_tokens: Optional[int],
         stream: bool,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
-        return {
+        payload: Dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "temperature": self.default_temperature if temperature is None else temperature,
             "max_tokens": self.default_max_tokens if max_tokens is None else max_tokens,
             "stream": stream,
         }
+        # 原生 function calling：把工具清单交给 API，由模型决定何时调用。
+        # 仅在使用方显式传入时附带，保证对不支持 tools 的 provider / 离线替身零侵入。
+        if tools:
+            payload["tools"] = tools
+        return payload
 
     @staticmethod
     def _raise_for_http(resp: httpx.Response) -> None:
@@ -171,8 +202,11 @@ class OpenAICompatClient(BaseLLMClient):
         *,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> LLMResult:
-        payload = self._payload(messages, temperature=temperature, max_tokens=max_tokens, stream=False)
+        payload = self._payload(
+            messages, temperature=temperature, max_tokens=max_tokens, stream=False, tools=tools
+        )
         try:
             resp = await self._client.post(self._endpoint, headers=self._headers(), json=payload)
         except httpx.TimeoutException as exc:
@@ -200,7 +234,26 @@ class OpenAICompatClient(BaseLLMClient):
             content=message.get("content") or "",
             finish_reason=choices[0].get("finish_reason"),
             usage=usage,
+            tool_calls=self._parse_tool_calls(message.get("tool_calls")),
         )
+
+    @staticmethod
+    def _parse_tool_calls(raw_calls: Optional[list]) -> List[ToolCall]:
+        """把 OpenAI 风格的 message.tool_calls 归一成内部 ToolCall。
+
+        参数 arguments 在 API 里是 JSON 字符串；解析失败时退化为空 dict，
+        交给上层 registry.validate 报「缺少必填参数」并回喂模型自纠，而不是直接崩。
+        """
+        out: List[ToolCall] = []
+        for tc in (raw_calls or []):
+            fn = (tc or {}).get("function") or {}
+            name = str(fn.get("name") or "")
+            if not name:
+                continue
+            raw_args = fn.get("arguments")
+            args = _coerce_arguments(raw_args)
+            out.append(ToolCall(name=name, arguments=args))
+        return out
 
     # ---------------- 流式 ---------------- #
     async def astream(
@@ -209,8 +262,11 @@ class OpenAICompatClient(BaseLLMClient):
         *,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> AsyncIterator[str]:
-        payload = self._payload(messages, temperature=temperature, max_tokens=max_tokens, stream=True)
+        payload = self._payload(
+            messages, temperature=temperature, max_tokens=max_tokens, stream=True, tools=tools
+        )
         try:
             async with self._client.stream(
                 "POST", self._endpoint, headers=self._headers(), json=payload
@@ -287,6 +343,7 @@ class EchoClient(BaseLLMClient):
         *,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> LLMResult:
         content = self._reply(messages)
         approx = max(1, len(content) // 2)  # 粗略估算，替身没有真实 token 计数
@@ -302,6 +359,7 @@ class EchoClient(BaseLLMClient):
         *,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> AsyncIterator[str]:
         import asyncio
 

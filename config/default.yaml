@@ -36,11 +36,13 @@ judge:
   timeout: 30.0
   max_retries: 2
 
-# Agent（工具调用）：手写 tool-call 循环。max_steps 是防跑飞的安全阀
+# Agent（工具调用）：手写 tool-call 循环，支持两种协议。max_steps 是防跑飞的安全阀
 agent:
   enabled: true
   max_steps: 3
-  protocol: handwritten      # 自建结构化协议，不依赖厂商原生 function calling
+  # protocol: native    —— 把工具以 OpenAI tools 参数下发，由模型自行决定是否调用（默认，最稳）
+  #            handwritten —— 把工具写成 ```tool 代码块塞进 system（兼容免费额度模型 / 评测对照）
+  protocol: native
   question_bank: config/question_bank.json
 
 # 检索策略：bm25（零依赖，默认） / vector / hybrid

@@ -33,6 +33,7 @@ from .protocol import (
     ToolCallParseError,
     render_observation,
     render_tools_prompt,
+    tool_specs_to_openai,
     try_parse_tool_call,
 )
 from .memory import MemoryManager
@@ -52,6 +53,7 @@ class AgentLoop:
         bank: Optional[Dict[str, Any]] = None,
         max_steps: int = 3,
         memory: Optional[MemoryManager] = None,
+        protocol: str = "handwritten",
     ) -> None:
         self.client = client
         self.registry = registry
@@ -59,6 +61,14 @@ class AgentLoop:
         self.bank = bank if bank is not None else {}
         self.max_steps = max(1, int(max_steps))
         self.memory = memory
+        # protocol: "handwritten"（默认，把工具写成 ```tool 代码块塞进 system）
+        #            "native"（把工具以 OpenAI tools 参数下发，由模型自行决定是否调用）。
+        # 两者共用同一套工具执行 / 死循环检测 / 步数上限逻辑，只在「怎么拿到 ToolCall」上分叉。
+        self.protocol = protocol
+        # native 模式下预先把工具清单转成 OpenAI schema；handwritten 模式下为 None。
+        self._openai_tools: Optional[List[Dict[str, Any]]] = (
+            tool_specs_to_openai(registry.specs()) if (protocol == "native" and registry) else None
+        )
 
     # ---------------- 主循环 ---------------- #
     async def run(
@@ -94,12 +104,15 @@ class AgentLoop:
         reason: StopReason = "max_steps_recovered"
         # max_steps 是「允许的工具步数」，产出自然语言终答的那一轮不占预算
         max_turns = self.max_steps + 1
+        # native 模式下随轮下发的工具清单；finish_interview 之后清空，避免收尾轮仍被诱导调工具。
+        current_tools = self._openai_tools
 
         for _ in range(1, max_turns + 1):
             t0 = time.perf_counter()
             try:
                 result = await self.client.achat(
-                    messages, temperature=temperature, max_tokens=max_tokens
+                    messages, temperature=temperature, max_tokens=max_tokens,
+                    **self._tools_kw(current_tools),
                 )
             except LLMError as exc:
                 steps.append(
@@ -114,7 +127,7 @@ class AgentLoop:
 
             steps.append(AgentStep(index=len(steps) + 1, kind="llm", content=text[:400], elapsed_ms=elapsed))
 
-            call, perr = try_parse_tool_call(text)
+            call, perr = self._extract_call(result, text)
             if perr is not None:
                 steps.append(
                     AgentStep(index=len(steps) + 1, kind="parse_error", ok=False,
@@ -175,12 +188,16 @@ class AgentLoop:
             if tool_result.ok and call.name == "finish_interview":
                 # 终局工具：再问一次拿自然语言收尾，但不再允许工具
                 messages = _strip_tools(messages)
+                current_tools = None  # native 模式同步收掉 tools 参数
 
         # ---- 触到步数上限：追加禁止再调工具的指令，再问一次 ---- #
         messages.append({"role": "user", "content": FINAL_FORCE_MESSAGE})
         t0 = time.perf_counter()
         try:
-            last = await self.client.achat(messages, temperature=temperature, max_tokens=max_tokens)
+            last = await self.client.achat(
+                messages, temperature=temperature, max_tokens=max_tokens,
+                **self._tools_kw(current_tools),
+            )
             elapsed = _ms(t0)
             self._accumulate(usage, last.usage)
             usage.model_calls += 1
@@ -200,14 +217,37 @@ class AgentLoop:
         messages = build_messages(history, profile)
         if self.registry is None:
             return messages
-        tools_prompt = render_tools_prompt(self.registry.specs())
-        if tools_prompt and messages and messages[0].get("role") == "system":
-            messages = [dict(m) for m in messages]
-            messages[0] = {
-                "role": "system",
-                "content": messages[0]["content"].rstrip() + "\n\n" + tools_prompt,
-            }
+        # native 模式下工具通过 API 的 tools 参数下发，不该再写进 system；
+        # 只有 handwritten 模式才把工具说明渲染进 system 提示词。
+        if self.protocol == "handwritten":
+            tools_prompt = render_tools_prompt(self.registry.specs())
+            if tools_prompt and messages and messages[0].get("role") == "system":
+                messages = [dict(m) for m in messages]
+                messages[0] = {
+                    "role": "system",
+                    "content": messages[0]["content"].rstrip() + "\n\n" + tools_prompt,
+                }
         return messages
+
+    # ---------------- 工具调用提取（原生 / 手写两条路径归一成 ToolCall） ---------------- #
+    def _extract_call(
+        self, result, text: str
+    ) -> Tuple[Optional["ToolCall"], Optional[ToolCallParseError]]:
+        """从一次模型响应里取出要执行的工具调用。
+
+        - native 模式：优先用 LLMResult.tool_calls（API 保证格式合法，参数解析失败退化为空 dict）；
+        - 否则（handwritten 模式，或 native 但模型没调工具）回退到文本里的 ```tool 代码块解析。
+        返回 (ToolCall, None) / (None, None) / (None, ParseError)，语义与 try_parse_tool_call 一致。
+        """
+        if result.tool_calls:
+            # 我们的协议一轮只调一个工具，取第一个；其余忽略（模型若多调会在下一轮继续）。
+            return result.tool_calls[0], None
+        return try_parse_tool_call(text)
+
+    def _tools_kw(self, current_tools) -> Dict[str, Any]:
+        """只有 native 模式且当前还允许用工具时才下发 tools 参数；handwritten 模式绝不传，
+        以免手写测试用的假客户端（achat 不接受 tools 关键字）报 TypeError。"""
+        return {"tools": current_tools} if (self.protocol == "native" and current_tools) else {}
 
     async def _execute(self, call, session_id: str, profile: Optional[Dict[str, Any]]):
         t0 = time.perf_counter()

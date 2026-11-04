@@ -50,8 +50,8 @@ class AgentConfig(BaseModel):
 
     enabled: bool = True
     max_steps: int = 3
-    # 手写协议 vs 厂商原生 tools 参数。W3 阶段只有 handwritten 实现
-    protocol: str = "handwritten"
+    # 工具调用协议：native（默认，把工具以 OpenAI tools 参数下发）| handwritten（```tool 代码块塞进 system）
+    protocol: str = "native"
     question_bank: str = "config/question_bank.json"
 
 
