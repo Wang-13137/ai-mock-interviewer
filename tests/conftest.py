@@ -6,11 +6,18 @@ from fastapi.testclient import TestClient
 
 from src.version import __version__
 from src.app import create_app
-from src.core.config import LLMConfig, MetricsConfig, ServerConfig, Settings
+from src.core.config import (
+    DataHubConfig,
+    EvalHubConfig,
+    LLMConfig,
+    MetricsConfig,
+    ServerConfig,
+    Settings,
+)
 
 
 @pytest.fixture()
-def offline_settings() -> Settings:
+def offline_settings(tmp_path) -> Settings:
     return Settings(
         env="test",
         version=__version__,
@@ -18,6 +25,9 @@ def offline_settings() -> Settings:
         llm=LLMConfig(provider="mock", model="echo-1"),
         metrics=MetricsConfig(enabled=False),
         prompts_dir="config/prompts",
+        # 中台数据库指向 tmp_path：测试不写仓库里的 data/，也不污染本地已有 run 历史
+        datahub=DataHubConfig(db_path=str(tmp_path / "datahub.db")),
+        evalhub=EvalHubConfig(db_path=str(tmp_path / "evalhub.db")),
     )
 
 

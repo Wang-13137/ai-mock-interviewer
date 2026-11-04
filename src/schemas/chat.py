@@ -82,6 +82,9 @@ class HealthResponse(BaseModel):
     # 任何召回率数字都不得对外引用。让 /health 自己说真话，比写在文档里可靠。
     retrieval_strategy: str = ""
     semantic_retrieval: bool = False
+    # 中台可用性：false 表示该层未启用或初始化失败（评测路由会返回 503）
+    datahub_enabled: bool = False
+    evalhub_enabled: bool = False
 
 
 class AgentChatResponse(ChatResponse):

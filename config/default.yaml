@@ -62,3 +62,16 @@ prompts_dir: config/prompts
 metrics:
   enabled: true
   path: logs/metrics.jsonl
+
+# 数据中台：数据集登记 / 质量门禁 / content-hash 版本 / 血缘
+# db 只存元数据，JSON 数据文件仍是唯一事实源；data/ 不进 Git
+datahub:
+  enabled: true
+  db_path: data/datahub.db
+
+# 评测中台：任务编排 / 指标落库 / 与基线的回归门禁
+# gate_threshold 是相对跌幅阈值（0.02 = 2 个百分点），超过即判 regressed
+evalhub:
+  enabled: true
+  db_path: data/evalhub.db
+  gate_threshold: 0.02

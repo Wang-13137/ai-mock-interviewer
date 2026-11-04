@@ -86,6 +86,29 @@ class RagConfig(BaseModel):
     reranker_model: str = "BAAI/bge-reranker-base"
 
 
+class DataHubConfig(BaseModel):
+    """数据中台：数据集登记、质量门禁、版本与血缘。
+
+    `db_path` 只存元数据（JSON 数据文件本身仍是唯一的事实源）。
+    """
+
+    enabled: bool = True
+    db_path: str = "data/datahub.db"
+
+
+class EvalHubConfig(BaseModel):
+    """评测中台：任务编排、指标落库、与基线的回归门禁。
+
+    `gate_threshold` 是回归判定的默认阈值（相对跌幅，0.02 = 2 个百分点）。
+    设太小会天天报回归（噪声），设太大则真退步也发现不了；0.02 是在本项目
+    检索指标的量级（0.80 上下、样本 60 条）上，噪声与真实差异的实用分界。
+    """
+
+    enabled: bool = True
+    db_path: str = "data/evalhub.db"
+    gate_threshold: float = 0.02
+
+
 class Settings(BaseModel):
     env: str = "dev"
     version: str = __version__
@@ -97,6 +120,8 @@ class Settings(BaseModel):
     agent: AgentConfig = Field(default_factory=AgentConfig)
     rag: RagConfig = Field(default_factory=RagConfig)
     memory: MemoryConfig = Field(default_factory=MemoryConfig)
+    datahub: DataHubConfig = Field(default_factory=DataHubConfig)
+    evalhub: EvalHubConfig = Field(default_factory=EvalHubConfig)
     prompts_dir: str = "config/prompts"
 
 

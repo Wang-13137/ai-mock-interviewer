@@ -2,7 +2,7 @@
 
 把本科毕设《基于 VR 与语音交互的 AI 模拟面试官》从 C#/Unity 单体，重构成一套 **Python + FastAPI 的 LLM 应用工程**。
 
-- 当前版本：**v0.6.1**（服务 / 评测体系 / Agent 双轨循环 / 自建 RAG / 记忆管理 / Docker 均已就位）
+- 当前版本：**v0.7**（服务 / 评测体系 / Agent 双轨循环 / 自建 RAG / 记忆管理 / Docker / **数据中台 / 评测中台** 均已就位）
 - 目标岗位：AI 应用工程师（校招 2027 届）
 - 许可证：MIT
 
@@ -11,7 +11,7 @@
 
 ---
 
-## 一、全景：五个模块都做了什么
+## 一、全景：七个模块都做了什么
 
 | 模块 | 状态 | 一句话 |
 | --- | --- | --- |
@@ -20,10 +20,12 @@
 | 评测体系 `src/eval/` | ✅ 地基就位 | LLM-as-judge + kappa/QWK 一致性 + 多指标强制同报 |
 | Agent 循环 `src/agent/` | ✅ | **双轨协议**（native function calling + 手写 ```tool 兜底）+ 工具注册表 + 会话状态 + 三道防线 |
 | 检索层 `src/rag/` | ✅ 默认 BM25；语义检索为**可选** | BM25 / 向量（bge-small-zh）/ RRF 混合三策略 + 标定过的阈值 + 实测后默认关闭的重排。**真实语义需另装 `requirements-semantic.txt` 并自备权重**；未装时会退化成可自报的替身 |
+| 数据中台 `src/datahub/` | ✅ | 数据集登记 + content-hash 版本 + 质量门禁（含跨数据集**引用完整性**）+ 血缘 + 快照 |
+| 评测中台 `src/evalhub/` | ✅ | 任务编排（检索/生成/Agent）+ 指标与逐条明细落库 + 配置指纹 + **回归门禁** + `trusted` 红线 |
 | 记忆管理 `src/agent/memory.py` | ✅ | token 预算 + 滚动摘要，离线抽取式兜底 |
 | Docker | ✅ | slim 镜像（不装 torch，容器内默认 BM25），非 root + 健康检查 |
 
-测试：**139 passed**（pytest）。
+测试：**179 passed**（pytest，全部离线替身，CI 免 Key）。
 
 ---
 
@@ -38,8 +40,8 @@ ai-mock-interviewer/
 │   ├── bench_questions.json    # 12 条时延基准问题
 │   └── eval_set.example.json   # 10 条生成质量评测种子
 ├── src/
-│   ├── app.py                  # FastAPI：/health、/v1/chat、/v1/chat/stream、/v1/tools、/v1/chat/agent
-│   ├── cli.py                  # python -m src.cli serve|chat|eval|agent
+│   ├── app.py                  # FastAPI：/health、/v1/chat*、/v1/tools、/v1/data/*、/v1/eval/*
+│   ├── cli.py                  # python -m src.cli serve|chat|agent|eval|data|evals
 │   ├── metrics.py              # LatencyMeter（TTFT/总耗时）+ JSONL 落盘 + 分位数
 │   ├── core/config.py          # YAML 默认值 + AIMI_ 环境变量覆盖 + 厂商预设
 │   ├── clients/llm.py          # OpenAI 兼容客户端（手写 SSE 解析）+ 离线替身 EchoClient
@@ -58,15 +60,30 @@ ai-mock-interviewer/
 │   │   ├── rerank.py           # cross-encoder 精排（实测负收益，默认关闭）
 │   │   ├── retriever.py        # 统一入口：bm25 / vector / hybrid
 │   │   └── evaluate.py         # Recall@k / MRR@10 / Hit@1 + 饱和诊断
-│   └── eval/                   # LLM-as-judge 评测（dataset/judge/stats/runner）
+│   ├── eval/                   # LLM-as-judge 评测（dataset/judge/stats/runner）
+│   ├── datahub/                # 数据中台
+│   │   ├── models.py           # Dataset / Version / QualityReport / Lineage 契约
+│   │   ├── store.py            # SQLite 元数据仓储（零新依赖）
+│   │   ├── quality.py          # 分 kind 质量门禁 + 跨数据集引用完整性
+│   │   ├── registry.py         # 同步编排：hash 幂等 / blocked 不覆盖 / dirty 探测 / 快照
+│   │   └── api.py              # /v1/data/*
+│   └── evalhub/                # 评测中台
+│       ├── models.py           # Run / Gate / MetricDelta / TaskInfo 契约
+│       ├── store.py            # SQLite：run 元数据 + 逐条明细
+│       ├── tasks.py            # retrieval / generation / agent 三类任务
+│       ├── gate.py             # 回归门禁：可比性检查 + 指标差集
+│       ├── runner.py           # 编排：快照绑定 -> 执行 -> trusted -> 门禁 -> 落库
+│       └── api.py              # /v1/eval/*
 ├── scripts/
 │   ├── bench.py                # 时延基准（非流式 vs SSE）
 │   ├── eval_retrieval.py       # 检索三策略对比，替身自动打警示
 │   ├── calibrate_min_score.py  # 向量检索阈值标定
+│   ├── smoke_platform.py       # 中台冒烟：同步 -> 跑评测 -> 与基线比较
 │   └── publish_evidence.py     # 把 reports/ 脱敏后发布到 docs/evidence/
-├── tests/                      # 139 个用例（全部离线替身，CI 免 Key）
+├── tests/                      # 179 个用例（全部离线替身，CI 免 Key）
 ├── docs/
 │   ├── RESULTS.md              # 对外数字唯一真值表（可外引 / 禁止外引）
+│   ├── datahub-evalhub.md      # 两个中台的设计取舍与面试问答
 │   ├── evidence/               # 四份脱敏检索评测报告，含逐条明细
 │   └── blog-draft.md           # 技术博客（已终检，待发布）
 ├── requirements-semantic.txt   # 可选：真实语义检索依赖
@@ -187,7 +204,79 @@ docker run -p 8000:8000 -e ZHIPU_API_KEY=你的key -e AIMI_LLM__PROVIDER=zhipu a
 
 ---
 
-## 八、厂商预设
+## 八、数据中台与评测中台（v0.7）
+
+加这两层不是为了「听起来大气」，而是因为项目里真实存在两个**静默失败**：
+
+1. **数据是散的**：题库、检索评测集、对话评测集、bench 脚本是 4 份独立 JSON，彼此有引用关系
+   （评测集的 `relevant` 指向题库 id）。题库一改 id，评测集就指向空气——检索指标会悄悄变低，
+   **不报错，但结论是假的**。
+2. **评测是一次性的**：`scripts/eval_retrieval.py` 跑完写份 md 就结束了。想回答「这次改动让 MRR 掉了几个点」，
+   只能人肉翻历史文件——所以实际上从来没有人真的去比。
+
+### 数据中台 `src/datahub/`
+
+做四件事，都不复杂，但都对应上面的问题：
+
+| 能力 | 实现 | 解决什么 |
+| --- | --- | --- |
+| 登记 + 版本 | `content_hash`（sha256 前 16 位）作版本号 | 人会给版本号偷懒，hash 不会。同一 hash = 同一份字节，这是评测可复现的前提 |
+| 质量门禁 | `quality.py` 分 kind 校验，error 直接拒绝入库 | 坏数据进不来，比每次消费时过滤便宜 |
+| 引用完整性 | `retrieval_eval.relevant ⊆ question_bank.id` | 把「静默跑偏」变成 `dangling_reference` 硬错误 |
+| 血缘 + 快照 | `depends_on` 声明依赖；评测绑定 hash 而非路径 | 路径会被悄悄改，hash 不会；`dirty` 标记「改了但没同步」 |
+
+三个刻意设计：
+- **blocked 不覆盖 latest**：数据改坏时不许顶掉上一个可用版本，否则「修一下就生效」会变成「改坏也生效」。
+- **幂等**：内容没变就是 `unchanged`，不产生新版本、不重跑校验，服务启动可以无脑 `sync_all()`。
+- **不搬迁数据**：JSON 仍是唯一事实源，SQLite 只存元数据。作品集项目里去搞数据湖是过度设计。
+
+### 评测中台 `src/evalhub/`
+
+把一次性脚本变成流水线：**任务注册 → 绑定数据快照 → 执行 → 落库（含逐条明细）→ 与基线比**。
+
+三类任务：`retrieval`（Recall@k / MRR / Hit@1，零 LLM 可离线）、`generation`（LLM-as-judge 五维）、
+`agent`（工具调用率 / 完成率 / 平均步数）。
+
+**回归门禁**（`gate.py`）先做三道可比性检查，过不了就判 `incomparable`，绝不硬比：
+
+| 检查 | 理由 |
+| --- | --- |
+| 任务相同 | 检索指标和生成分数没有可比性 |
+| `config_fingerprint` 相同 | 换了模型/策略/阈值，涨跌不归因于代码改动 |
+| `dataset_hash` 相同 | **数据换了指标当然会变**，这是最常见的假警报来源 |
+
+**`trusted` 把红线编码进数据结构**——这是这层最有价值的部分：
+每个 run 落库时判定「是否真实模型 + 真实嵌入产出」，替身产物一律 `trusted=false`，
+而门禁**只允许 trusted run 之间比较**。于是「替身数字不得外引」从文档里的自觉，
+变成了系统层面的硬约束：拿替身分数当基线，门禁会直接拒绝。
+
+### 三条命令
+
+```bash
+python -m src.cli data ls                       # 数据资产 + 质量状态 + 谁引用谁
+python -m src.cli evals run --task retrieval --baseline latest   # 跑评测并和上次比
+python -m src.cli evals gate <run_id> --threshold 0.02           # 单独复核门禁
+```
+
+实测输出（BM25 默认配置，60 条标注 query，全离线）：
+
+```
+run r-20261104-181927-2abd  status=succeeded  trusted=True
+  mrr@10  0.7672   recall@3  0.7917   semantic_mrr@10  0.5511
+门禁结论：pass（基线 r-20261104-181741-aa5c，阈值 2.0%）
+```
+
+> 注意这组是 **BM25** 的数字，和 `docs/RESULTS.md` 里 bge 语义检索的 0.825/0.829 不是一回事
+> ——策略不同，不可混引。两组各自都能追溯到数据 hash 与 run 记录。
+
+REST 侧：`GET /v1/data/datasets`、`POST /v1/eval/runs`、`GET /v1/eval/runs/{id}/cases`、
+`POST /v1/eval/runs/{id}/gate`。`/health` 会如实报告 `datahub_enabled` / `evalhub_enabled`。
+
+详细设计取舍与可能的追问见 [`docs/datahub-evalhub.md`](docs/datahub-evalhub.md)。
+
+---
+
+## 九、厂商预设
 
 | provider | 默认模型 | Key 环境变量 |
 | --- | --- | --- |
@@ -212,18 +301,21 @@ docker run -p 8000:8000 -e ZHIPU_API_KEY=你的key -e AIMI_LLM__PROVIDER=zhipu a
 
 ---
 
-## 九、已完成 / 下一步
+## 十、已完成 / 下一步
 
 **已完成**：推 GitHub 公开仓库、博客终检（`docs/blog-draft.md`）、四份脱敏检索证据公开、
-对外数字真值表（`docs/RESULTS.md`）、版本号统一、语义检索可选依赖拆分。
+对外数字真值表（`docs/RESULTS.md`）、版本号统一、语义检索可选依赖拆分、
+**数据中台（登记/门禁/血缘/快照）与评测中台（编排/落库/回归门禁/`trusted` 红线）**。
 
 **下一步（按优先级）**
 
 1. 给 `scripts/smoke_native.py` 接一个 nightly/manual CI job，归档一份脱敏的真实模型工具调用输出
    —— 目前「v0.6 原生 function calling 生效」只有本机口述记录，**仓库里没有可验证证据**。
-2. 补统一错误契约（`{code,message,trace_id}`）、CORS / 限流 / 幂等、SSE 心跳与取消处理、429 指数退避。
-3. 生成质量评测集 10 → 100 条，人工抽 30 条标完再谈裁判一致性（现在只有解析率，n=10）。
-4. 会话状态从进程内 dict 落到 SQLite/Redis，结构化日志与 `trace_id` 注入。
+2. 在 CI 里跑 `evals run --task retrieval --baseline latest`，让每次 PR 自动出回归结论
+   （中台已具备能力，缺的是流水线接线）。
+3. 补统一错误契约（`{code,message,trace_id}`）、CORS / 限流 / 幂等、SSE 心跳与取消处理、429 指数退避。
+4. 生成质量评测集 10 → 100 条，人工抽 30 条标完再谈裁判一致性（现在只有解析率，n=10）。
+5. 会话状态从进程内 dict 落到 SQLite/Redis，结构化日志与 `trace_id` 注入。
 
 **不会做的事**：把历史 bench 时延 / token 曲线数字「补测后回填」——那组口径已判定存疑、
 一律不外引；若要一组可对外时延数据，必须另起一次有完整归档的实测并更新 `docs/RESULTS.md`。

@@ -6,9 +6,11 @@
     # 等价于 PYTHONPATH=. uvicorn src.app:app --reload
 
 接口：
-    GET  /health            健康检查（含当前 provider / model / ready）
+    GET  /health            健康检查（含当前 provider / model / ready / 中台可用性）
     POST /v1/chat           非流式问答
     POST /v1/chat/stream    SSE 流式问答
+    GET  /v1/data/*         数据中台：数据集登记、质量门禁、版本、血缘
+    POST /v1/eval/runs      评测中台：执行评测、与基线比较、回归门禁
 """
 
 from __future__ import annotations
@@ -29,6 +31,10 @@ from .agent.tools import build_default_registry, load_question_bank
 from .clients.llm import BaseLLMClient, EchoClient, LLMError, OpenAICompatClient, Message
 from .core.config import Settings, load_settings, resolve_llm
 from .core.logger import setup_logging
+from .datahub import DataHub
+from .datahub.api import router as datahub_router
+from .evalhub import EvalHub
+from .evalhub.api import router as evalhub_router
 from .metrics import JsonlSink, LatencyMeter
 from .prompts.interviewer import build_messages
 from .schemas.agent import ToolSpec
@@ -123,6 +129,33 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             app.state.bank = {}
             app.state.registry = None
             app.state.retriever = None
+
+        # ---------------- 数据中台 / 评测中台 ---------------- #
+        # 初始化失败不该让服务起不来：/health 会如实报告 enabled=false，
+        # 评测路由返回 503，其余对话功能照常可用。
+        app.state.datahub = None
+        app.state.evalhub = None
+        if cfg.datahub.enabled:
+            try:
+                datahub = DataHub(cfg)
+                # 启动即同步一次：幂等且廉价（4 份 JSON，毫秒级），换来开箱即可查询数据资产
+                results = datahub.sync_all()
+                app.state.datahub = datahub
+                blocked = [r.dataset_id for r in results if r.status == "blocked"]
+                log.info(
+                    "datahub 就绪：%d 份数据集，登记 %d / 未变 %d / 拦截 %d",
+                    len(results),
+                    sum(1 for r in results if r.status == "registered"),
+                    sum(1 for r in results if r.status == "unchanged"),
+                    len(blocked),
+                )
+                if blocked:
+                    log.warning("数据质量门禁拦截：%s（这些数据集当前没有可用版本）", blocked)
+                if cfg.evalhub.enabled:
+                    app.state.evalhub = EvalHub(cfg, datahub)
+                    log.info("evalhub 就绪：%d 个任务", len(app.state.evalhub.tasks()))
+            except Exception as exc:
+                log.error("数据中台初始化失败，数据/评测路由将不可用：%s", exc)
         log.info(
             "boot env=%s provider=%s model=%s ready=%s",
             cfg.env,
@@ -142,6 +175,10 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         lifespan=lifespan,
     )
 
+    # 中台路由：数据资产（/v1/data/*）与评测编排（/v1/eval/*）
+    app.include_router(datahub_router)
+    app.include_router(evalhub_router)
+
     # ---------------- 路由 ---------------- #
     @app.get("/health", response_model=HealthResponse, tags=["ops"])
     def health(request: Request) -> HealthResponse:
@@ -159,6 +196,8 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             tools=request.app.state.registry.names() if request.app.state.registry else [],
             retrieval_strategy=meta.get("strategy", "") or cfg.rag.strategy,
             semantic_retrieval=bool(meta.get("semantic_embedding", False)),
+            datahub_enabled=getattr(request.app.state, "datahub", None) is not None,
+            evalhub_enabled=getattr(request.app.state, "evalhub", None) is not None,
         )
 
     @app.get("/v1/tools", response_model=List[ToolSpec], tags=["agent"])
