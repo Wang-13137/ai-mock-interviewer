@@ -250,6 +250,8 @@ python -m src.cli evals gate <run_id> --threshold 0.02 --abs-threshold 0.02
 python -m src.cli evals prune --keep-last 50 --dry-run
 python scripts/smoke_platform.py            # 端到端演示（含注入劣化对照），无需 Key
 python scripts/check_docs_drift.py          # 文档数字与真实用例数是否一致
+python scripts/ci_gate.py                   # 回归门禁（CI 同款）：与固化基线比，退步 exit 1
+python scripts/ci_gate.py --update          # 显式重新定基线（review 后随代码提交）
 ```
 
 ### 4.1 人工标注工作流（kappa/QWK 的前置条件）
@@ -296,8 +298,12 @@ CI 里不需要人工记 run id。
    多机部署时需要换成 Postgres —— 但那时真正该换的是整个持久层，不只是这张表。
 7. **没有告警**：门禁判 `regressed` 只是落库，不会通知任何人。CI 化的下一步是
    "PR 里跑 retrieval 评测 + regressed 时阻断合并"，这需要先有 CI 里可复现的基线。
-8. **回归门禁尚未按 PR 触发**：`scripts/check_docs_drift.py` 已接 CI，但评测门禁还没接——
-   它的前置条件是"CI 里有稳定基线与固定评测集"，属于下一阶段。
+8. **~~回归门禁尚未按 PR 触发~~（已接入）**：基线 run 的指标 + 60 条明细固化在
+   `config/ci_baseline.json`（进 git），CI 里 `scripts/ci_gate.py` 跑一次 BM25 检索评测与它比，
+   `regressed` / `incomparable` 都阻断。改数据/配置必须显式 `--update` 并提交 diff——
+   **基线不许静默漂移**。已知边界：语义路径的基线依赖模型权重，不适合进 git，
+   留在本地 evalhub 走 `evals gate`；基线文件只存了 recall@3/rr 两条明细，
+   其余指标退回点估计（还原校验会如实报告"判不了显著"）。
 
 ---
 

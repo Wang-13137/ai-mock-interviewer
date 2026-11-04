@@ -32,6 +32,12 @@ jobs:
         # 全程跑在离线替身 EchoClient 上，CI 不需要任何 API Key
         run: pytest -q
 
+      - name: Regression gate (retrieval)
+        # 门禁进 CI：跑一次 BM25 检索评测与固化基线（config/ci_baseline.json）比，
+        # regressed / incomparable 都 exit 1 阻断。改了数据或配置时必须显式
+        # `python scripts/ci_gate.py --update` 重新定基线并提交 diff——基线不许静默漂移。
+        run: python scripts/ci_gate.py
+
       - name: Docs drift check
         # 真值表与文档里的用例数必须等于实际用例数，否则 CI 红
         run: python scripts/check_docs_drift.py

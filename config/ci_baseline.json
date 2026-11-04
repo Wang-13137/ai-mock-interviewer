@@ -1,0 +1,447 @@
+{
+  "task": "retrieval",
+  "updated_at": "2026-11-05T01:24:13",
+  "gate": {
+    "abs_threshold": 0.02,
+    "pct_threshold": 0.02,
+    "bootstrap_iters": 1000
+  },
+  "baseline": {
+    "run_id": "r-20261105-012413-0ac1",
+    "dataset_hash": "416df69927339b38",
+    "config_fingerprint": "4ce000139aa57fd2",
+    "metrics": {
+      "recall@1": 0.65,
+      "recall@3": 0.7917,
+      "recall@5": 0.8167,
+      "mrr@10": 0.7672,
+      "hit@1": 0.7167,
+      "literal_mrr@10": 0.9833,
+      "literal_recall@3": 0.9833,
+      "semantic_mrr@10": 0.5511,
+      "semantic_recall@3": 0.6
+    },
+    "cases": [
+      {
+        "case_id": "0",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "1",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "2",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "3",
+        "metrics": {
+          "recall@3": 0.5,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "4",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "5",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "6",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "7",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "8",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "9",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "10",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "11",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "12",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "13",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "14",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "15",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "16",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "17",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "18",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "19",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "20",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "21",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 0.5
+        }
+      },
+      {
+        "case_id": "22",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "23",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.0
+        }
+      },
+      {
+        "case_id": "24",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.0
+        }
+      },
+      {
+        "case_id": "25",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "26",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 0.5
+        }
+      },
+      {
+        "case_id": "27",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.0
+        }
+      },
+      {
+        "case_id": "28",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "29",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.0
+        }
+      },
+      {
+        "case_id": "30",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "31",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "32",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "33",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "34",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "35",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "36",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "37",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "38",
+        "metrics": {
+          "recall@3": 0.5,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "39",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.0
+        }
+      },
+      {
+        "case_id": "40",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.2
+        }
+      },
+      {
+        "case_id": "41",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "42",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 0.5
+        }
+      },
+      {
+        "case_id": "43",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.0
+        }
+      },
+      {
+        "case_id": "44",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.0
+        }
+      },
+      {
+        "case_id": "45",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 0.333
+        }
+      },
+      {
+        "case_id": "46",
+        "metrics": {
+          "recall@3": 0.5,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "47",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "48",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.0
+        }
+      },
+      {
+        "case_id": "49",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.0
+        }
+      },
+      {
+        "case_id": "50",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "51",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "52",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "53",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 0.5
+        }
+      },
+      {
+        "case_id": "54",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "55",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "56",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 0.5
+        }
+      },
+      {
+        "case_id": "57",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "58",
+        "metrics": {
+          "recall@3": 1.0,
+          "rr": 1.0
+        }
+      },
+      {
+        "case_id": "59",
+        "metrics": {
+          "recall@3": 0.0,
+          "rr": 0.0
+        }
+      }
+    ]
+  }
+}
