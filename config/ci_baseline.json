@@ -1,14 +1,14 @@
 {
   "task": "retrieval",
-  "updated_at": "2026-11-05T01:24:13",
+  "updated_at": "2026-11-05T01:43:44",
   "gate": {
     "abs_threshold": 0.02,
     "pct_threshold": 0.02,
     "bootstrap_iters": 1000
   },
   "baseline": {
-    "run_id": "r-20261105-012413-0ac1",
-    "dataset_hash": "416df69927339b38",
+    "run_id": "r-20261105-014344-4c22",
+    "dataset_hash": "443618334fc2f267",
     "config_fingerprint": "4ce000139aa57fd2",
     "metrics": {
       "recall@1": 0.65,

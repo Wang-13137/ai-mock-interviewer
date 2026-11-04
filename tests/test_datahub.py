@@ -197,6 +197,19 @@ def test_content_hash_is_stable_and_short():
     assert len(content_hash(b"abc")) == 16
 
 
+def test_content_hash_normalizes_line_endings():
+    """CRLF 与 LF 必须同 hash：同一份 JSON 在 Windows 与 Linux CI 字节不同但语义相同。
+
+    不归一的话，跨平台环境永远判 dirty / incomparable——CI 门禁在"数据没变"
+    时集体误报（2026-11-05 实测踩中：本地基线与 Linux runner 指标完全一致，
+    唯 dataset_hash 因换行符不同而判不可比）。
+    """
+    assert content_hash(b'{"a": 1}\r\n') == content_hash(b'{"a": 1}\n')
+    assert content_hash(b"line1\r\nline2\r\n") == content_hash(b"line1\nline2\n")
+    # 归一化不能抹掉真实差异
+    assert content_hash(b'{"a": 1}\n') != content_hash(b'{"a": 2}\n')
+
+
 # --------------------------------------------------------------------------- #
 # 血缘与快照
 # --------------------------------------------------------------------------- #

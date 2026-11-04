@@ -46,8 +46,12 @@ def content_hash(raw: bytes) -> str:
 
     为什么不用语义化版本号（v1/v2）：人会忘记手动递增，而且两个分支可能都叫 v2。
     hash 是**唯一能证明「评测跑的是这堆字节」**的东西，也不依赖人守规矩。
+
+    为什么先归一化换行符再算：同一份 JSON 在 Windows 是 CRLF、在 Linux CI 是
+    LF，字节不同但语义完全相同——不归一的话，跨平台环境永远判 dirty /
+    incomparable，门禁会在"数据没变"时集体误报（2026-11-05 CI 实测踩中）。
     """
-    return hashlib.sha256(raw).hexdigest()[:16]
+    return hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()[:16]
 
 
 def build_default_specs(settings: Settings) -> List[DatasetSpec]:
