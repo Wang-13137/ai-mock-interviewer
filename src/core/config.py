@@ -16,6 +16,8 @@ from typing import Any, Dict, Optional
 import yaml
 from pydantic import BaseModel, Field
 
+from ..version import __version__
+
 ENV_PREFIX = "AIMI_"
 ENV_DELIM = "__"
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "default.yaml"
@@ -86,7 +88,7 @@ class RagConfig(BaseModel):
 
 class Settings(BaseModel):
     env: str = "dev"
-    version: str = "0.1.0"
+    version: str = __version__
     server: ServerConfig = Field(default_factory=ServerConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     # 裁判必须用与生成不同的模型，否则是自评偏差

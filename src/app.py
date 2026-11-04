@@ -32,6 +32,7 @@ from .core.logger import setup_logging
 from .metrics import JsonlSink, LatencyMeter
 from .prompts.interviewer import build_messages
 from .schemas.agent import ToolSpec
+from .version import __version__
 from .schemas.chat import (
     AgentChatResponse,
     ChatRequest,
@@ -136,7 +137,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     app = FastAPI(
         title="AI Mock Interviewer",
-        version="0.1.0",
+        version=__version__,
         description="把毕设《VR + 语音的 AI 模拟面试官》重构成 Python + FastAPI 的 LLM 应用工程",
         lifespan=lifespan,
     )

@@ -2,11 +2,12 @@
 
 把本科毕设《基于 VR 与语音交互的 AI 模拟面试官》从 C#/Unity 单体，重构成一套 **Python + FastAPI 的 LLM 应用工程**。
 
-- 当前进度：**W1–W5 地基全部就位**（服务 / 时延基准 / 评测体系 / Agent 循环 / 自建 RAG / 记忆管理 / Docker）
+- 当前版本：**v0.6.1**（服务 / 评测体系 / Agent 双轨循环 / 自建 RAG / 记忆管理 / Docker 均已就位）
 - 目标岗位：AI 应用工程师（校招 2027 届）
 - 许可证：MIT
 
 > 口径红线（README 也会被面试官看）：**不写未实测的数字**、**不写「训练/微调模型」**（调的是云端 API）、**不把托管平台指标说成自己的**、**替身（mock/哈希嵌入/抽取式摘要）跑出的任何数字不得外引**。
+> **哪个数字能对外引用，以 [`docs/RESULTS.md`](docs/RESULTS.md) 为唯一真值表**；本页所有检索数字均可追溯到 [`docs/evidence/`](docs/evidence/) 的逐条明细。
 
 ---
 
@@ -15,10 +16,10 @@
 | 模块 | 状态 | 一句话 |
 | --- | --- | --- |
 | 服务骨架 `src/app.py` | ✅ | FastAPI + SSE 流式，统一 OpenAI 兼容客户端（智谱/硅基/DeepSeek/OpenAI 四家预设）+ 离线替身 |
-| 时延基准 `scripts/bench.py` | ✅ 脚本就位 | 非流式 vs SSE 的 TTFT/P50/P95 对比；**等真实 Key 实测** |
+| 时延基准 `scripts/bench.py` | ⚠️ 脚本就位，数字不外引 | 非流式 vs SSE 的 TTFT/P50/P95 对比脚本；历史产物口径存疑，**按 `docs/RESULTS.md` 一律不对外引用** |
 | 评测体系 `src/eval/` | ✅ 地基就位 | LLM-as-judge + kappa/QWK 一致性 + 多指标强制同报 |
 | Agent 循环 `src/agent/` | ✅ | **双轨协议**（native function calling + 手写 ```tool 兜底）+ 工具注册表 + 会话状态 + 三道防线 |
-| 检索层 `src/rag/` | ✅ **真实语义模型** | BM25 / 向量（bge-small-zh）/ RRF 混合三策略 + 标定过的阈值 + 实测后默认关闭的重排 |
+| 检索层 `src/rag/` | ✅ 默认 BM25；语义检索为**可选** | BM25 / 向量（bge-small-zh）/ RRF 混合三策略 + 标定过的阈值 + 实测后默认关闭的重排。**真实语义需另装 `requirements-semantic.txt` 并自备权重**；未装时会退化成可自报的替身 |
 | 记忆管理 `src/agent/memory.py` | ✅ | token 预算 + 滚动摘要，离线抽取式兜底 |
 | Docker | ✅ | slim 镜像（不装 torch，容器内默认 BM25），非 root + 健康检查 |
 
@@ -61,8 +62,14 @@ ai-mock-interviewer/
 ├── scripts/
 │   ├── bench.py                # 时延基准（非流式 vs SSE）
 │   ├── eval_retrieval.py       # 检索三策略对比，替身自动打警示
-│   └── calibrate_min_score.py  # 向量检索阈值标定
-├── tests/                      # 135 个用例
+│   ├── calibrate_min_score.py  # 向量检索阈值标定
+│   └── publish_evidence.py     # 把 reports/ 脱敏后发布到 docs/evidence/
+├── tests/                      # 139 个用例（全部离线替身，CI 免 Key）
+├── docs/
+│   ├── RESULTS.md              # 对外数字唯一真值表（可外引 / 禁止外引）
+│   ├── evidence/               # 四份脱敏检索评测报告，含逐条明细
+│   └── blog-draft.md           # 技术博客（已终检，待发布）
+├── requirements-semantic.txt   # 可选：真实语义检索依赖
 ├── Dockerfile
 └── .github/workflows/ci.yml
 ```
@@ -75,9 +82,16 @@ ai-mock-interviewer/
 
 ```bash
 python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-# 需要语义检索再加：pip install sentence-transformers
+pip install -r requirements.txt                       # 零依赖最小集，默认 BM25
+
+# 可选：复现 docs/evidence/ 里的真实语义检索数字
+pip install -r requirements-semantic.txt              # 会连带安装 torch
+# 并把 bge-small-zh-v1.5 权重放到 models/（约 95MB，不随仓库分发）
 ```
+
+> **默认行为要说清楚**：不装可选依赖时 `vector` / `hybrid` 会自动退化成 `HashingEmbedder` 替身，
+> `/health` 如实标记 `semantic_retrieval=false`，评测脚本会打印替身警告。
+> 此时跑出的任何 Recall/MRR/Hit **不得对外引用**（见 `docs/RESULTS.md`）。
 
 ### 2. 配 API Key（**没 Key 也能把链路全跑通**）
 
@@ -105,13 +119,16 @@ docker build -t aimi .
 docker run -p 8000:8000 -e ZHIPU_API_KEY=你的key -e AIMI_LLM__PROVIDER=zhipu aimi
 ```
 
-镜像刻意不装 torch（容器内检索走 BM25）；需要语义检索时挂载 `models/` 并自行构建含 sentence-transformers 的镜像。
+镜像刻意不装 torch（容器内检索走 BM25）；需要语义检索时按
+`requirements-semantic.txt` 自行构建镜像并挂载 `models/`。**镜像内默认不是真实语义检索**，
+`/health` 会如实上报。
 
 ---
 
 ## 四、检索层的三个实测结论（都能当面试素材）
 
-评测口径：80 条题库 × 60 条手工标注（30 literal / 30 semantic），真实 bge-small-zh-v1.5。
+评测口径：80 条题库 × 60 条手工标注（30 literal / 30 semantic），真实 `bge-small-zh-v1.5` 本地权重。
+**证据：[`docs/evidence/retrieval-bge-60q.md`](docs/evidence/retrieval-bge-60q.md) 及同名 `.json` 逐条明细，可逐格复算下表。**
 
 | 策略 | Recall@3 | MRR@10 | Hit@1 |
 | --- | --- | --- | --- |
@@ -121,11 +138,14 @@ docker run -p 8000:8000 -e ZHIPU_API_KEY=你的key -e AIMI_LLM__PROVIDER=zhipu a
 
 1. **结论会随评测集难度翻转。** 在简单的 30 条评测集（literal 为主）上纯向量反超混合；
    补了 22 条字面零重叠的 semantic 难例后，hybrid 反超——**评测集构成决定结论，先看分布再看数字**。
-2. **两段式重排不是免费的午餐。** bge-reranker-base 实测负收益（MRR 0.883→0.828），
+2. **两段式重排不是免费的午餐。** `bge-reranker-base` 在两代评测集上都是负收益：
+   早期 30 条集 vector MRR **0.883→0.828**（[证据](docs/evidence/retrieval-bge-80.md) / [重排](docs/evidence/retrieval-rerank-80.md)）；
+   最终 60 条集 vector **0.814→0.774**、hybrid **0.829→0.767**
+   （[证据](docs/evidence/retrieval-bge-60q.md) / [重排](docs/evidence/retrieval-rerank-60q.md)）。
    短文本小语料上 bi-encoder 已接近天花板，重排加的是噪声。代码保留、默认关闭（`rag.rerank=none`）。
-3. **阈值必须随模型和数据标定。** `min_score` 用 `scripts/calibrate_min_score.py` 扫出来：
-   0.30–0.40 是平台区，取上沿 0.40；0.60 时 semantic 子集 MRR 从 0.634 崩到 0.408。
-   换模型或扩语料后必须重跑。
+3. **阈值必须随模型和数据标定。** `min_score` 用 `scripts/calibrate_min_score.py` 扫描，
+   平台区 0.30–0.40，代码与 `config/default.yaml` 统一取上沿 **0.40**（`DEFAULT_MIN_SCORE`）。
+   换模型或扩语料后必须重跑；标定过程无独立归档报告，按 `docs/RESULTS.md` C 区只讲方法、不把扫描数值当硬证据。
 
 > 语料只有 80 条，Recall@k 的绝对值没有参考价值；只看「同一份标注上哪个策略更好」。
 
@@ -145,7 +165,8 @@ docker run -p 8000:8000 -e ZHIPU_API_KEY=你的key -e AIMI_LLM__PROVIDER=zhipu a
 3. **工具异常不外溢**：未知工具 / 缺参 / 越界都转成 `ok=False` 的 observation 回喂模型自纠。
 
 每轮产出完整 trace（`POST /v1/chat/agent` 响应里的 `steps`），`summarize_runs` 汇总
-工具成功率 / 完成率 / 平均步数 / 停止原因分布——这组字段就是真实模型实测后要填的数字。
+工具成功率 / 完成率 / 平均步数 / 停止原因分布。**这些字段目前没有真实模型实测归档**，
+按 `docs/RESULTS.md` B 区**不得对外引用具体数值**——机制可以讲，数字不能报。
 
 ---
 
@@ -191,11 +212,21 @@ docker run -p 8000:8000 -e ZHIPU_API_KEY=你的key -e AIMI_LLM__PROVIDER=zhipu a
 
 ---
 
-## 九、下一步
+## 九、已完成 / 下一步
 
-- **真实 Key 实测**（等可用的智谱 Key）：`python scripts/bench.py --repeat 30 --tag glm4flash` → 出 TTFT/P95 → 打 `v0.3-bench` → 回填简历
-- 真实模型上的 Agent 完成率 / 工具成功率实测（`v0.4-eval`）
-- 生成质量评测集 10 → 100 条 + 人工抽 30 条校准裁判一致性
-- 推 GitHub 远程 + 技术博客（草稿在 `docs/blog-draft.md`）
+**已完成**：推 GitHub 公开仓库、博客终检（`docs/blog-draft.md`）、四份脱敏检索证据公开、
+对外数字真值表（`docs/RESULTS.md`）、版本号统一、语义检索可选依赖拆分。
 
-每完成一步：打 git tag、README 补一节、**只把真实测出的数字填进简历**。
+**下一步（按优先级）**
+
+1. 给 `scripts/smoke_native.py` 接一个 nightly/manual CI job，归档一份脱敏的真实模型工具调用输出
+   —— 目前「v0.6 原生 function calling 生效」只有本机口述记录，**仓库里没有可验证证据**。
+2. 补统一错误契约（`{code,message,trace_id}`）、CORS / 限流 / 幂等、SSE 心跳与取消处理、429 指数退避。
+3. 生成质量评测集 10 → 100 条，人工抽 30 条标完再谈裁判一致性（现在只有解析率，n=10）。
+4. 会话状态从进程内 dict 落到 SQLite/Redis，结构化日志与 `trace_id` 注入。
+
+**不会做的事**：把历史 bench 时延 / token 曲线数字「补测后回填」——那组口径已判定存疑、
+一律不外引；若要一组可对外时延数据，必须另起一次有完整归档的实测并更新 `docs/RESULTS.md`。
+
+发版纪律：改 `src/version.py` → 同步 `pyproject.toml` → 打同名 git tag →
+README 与 `docs/RESULTS.md` 同步核对，**只把 A 区数字填进简历**。

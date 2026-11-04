@@ -51,7 +51,10 @@ agent:
 rag:
   strategy: bm25
   embedder: auto
-  min_score: 0.20
+  # 与 src/rag/retriever.py DEFAULT_MIN_SCORE、RagConfig.min_score、README 保持一致。
+  # 2026-10-16 用 bge-small-zh-v1.5 在 80 语料 × 60 评测集上标定：平台区 0.30–0.40，取上沿。
+  # 评测报告即在此值下产出；改为其它值会导致运行时与公开证据不一致。
+  min_score: 0.40
 
 # System Prompt / rubric / 岗位模板的存放目录（W2 起会往里加文件）
 prompts_dir: config/prompts

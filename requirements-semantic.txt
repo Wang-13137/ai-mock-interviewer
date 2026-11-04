@@ -1,0 +1,16 @@
+# 可选依赖：真实语义检索（vector / hybrid 策略）
+#
+# 默认 requirements.txt 是零依赖最小集，只跑 BM25，装完就能起服务。
+# 需要复现 docs/evidence/ 里那组 bge 语义检索数字时，才装本文件：
+#     pip install -r requirements-semantic.txt
+#
+# 注意：
+# 1. 权重 bge-small-zh-v1.5（约 95MB）不随仓库分发，需自行放到 models/ 下。
+# 2. 未装本依赖时，vector/hybrid 会自动退化成 HashingEmbedder 替身，
+#    /health 会如实标记 semantic_retrieval=false，评测脚本会打印替身警告。
+#    替身跑出的任何 Recall/MRR/Hit 数字一律不得外引（见 docs/RESULTS.md B 区）。
+# 3. sentence-transformers 会连带安装 torch，体积较大；Docker 镜像刻意不含它。
+
+-r requirements.txt
+
+sentence-transformers>=3.0,<4

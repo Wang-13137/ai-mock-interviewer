@@ -1,0 +1,2486 @@
+[
+  {
+    "queries": 60,
+    "documents": 80,
+    "strategy": "vector",
+    "embedder": "bge-small-zh-v1.5 (local weights, not shipped with this repo)",
+    "semantic": true,
+    "recall@1": 0.65,
+    "recall@3": 0.8083,
+    "recall@5": 0.85,
+    "mrr@10": 0.7736,
+    "hit@1": 0.7167,
+    "by_kind": {
+      "literal": {
+        "queries": 30,
+        "recall@1": 0.9167,
+        "recall@3": 0.9667,
+        "recall@5": 1.0,
+        "mrr@10": 1.0,
+        "hit@1": 1.0
+      },
+      "semantic": {
+        "queries": 30,
+        "recall@1": 0.3833,
+        "recall@3": 0.65,
+        "recall@5": 0.7,
+        "mrr@10": 0.5472,
+        "hit@1": 0.4333
+      }
+    },
+    "cases": [
+      {
+        "query": "RAG 重排 消融实验",
+        "relevant": [
+          "proj-02",
+          "llm-01"
+        ],
+        "retrieved": [
+          "proj-02",
+          "proj-14",
+          "proj-18",
+          "proj-01",
+          "llm-01"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 0.5,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "知识库 chunk 怎么切分 重叠多少",
+        "relevant": [
+          "proj-01"
+        ],
+        "retrieved": [
+          "proj-01",
+          "eng-06",
+          "proj-03",
+          "proj-12",
+          "proj-10"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "引用精确率 幻觉 降低编造",
+        "relevant": [
+          "proj-03",
+          "llm-06"
+        ],
+        "retrieved": [
+          "proj-03",
+          "proj-15",
+          "llm-06",
+          "data-03",
+          "data-02"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "McNemar 显著性检验 为什么不用准确率",
+        "relevant": [
+          "proj-04",
+          "data-02"
+        ],
+        "retrieved": [
+          "proj-04",
+          "proj-15",
+          "proj-03",
+          "data-02",
+          "data-04"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 0.5,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "深度学习跑不过传统方法 负结果归因",
+        "relevant": [
+          "proj-05"
+        ],
+        "retrieved": [
+          "proj-05",
+          "proj-18",
+          "proj-17",
+          "proj-13",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "交叉验证 批次效应 数据泄漏",
+        "relevant": [
+          "proj-06"
+        ],
+        "retrieved": [
+          "proj-06",
+          "data-07",
+          "data-02",
+          "proj-15",
+          "data-04"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "质谱 峰 特征筛选 830 到 47",
+        "relevant": [
+          "proj-07"
+        ],
+        "retrieved": [
+          "proj-07",
+          "proj-17",
+          "data-03",
+          "eng-04",
+          "proj-03"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "可解释性 线性探针 遮挡法 置换检验",
+        "relevant": [
+          "proj-08"
+        ],
+        "retrieved": [
+          "proj-08",
+          "data-11",
+          "data-02",
+          "proj-15",
+          "proj-06"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "自己搭一套 RAG 分几步",
+        "relevant": [
+          "llm-01"
+        ],
+        "retrieved": [
+          "llm-01",
+          "proj-01",
+          "eng-04",
+          "proj-14",
+          "llm-13"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "向量库选型 FAISS Milvus PGVector",
+        "relevant": [
+          "llm-02"
+        ],
+        "retrieved": [
+          "llm-02",
+          "proj-17",
+          "proj-11",
+          "eng-02",
+          "proj-09"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "流式 TTFT 首字延迟 怎么优化",
+        "relevant": [
+          "llm-03"
+        ],
+        "retrieved": [
+          "llm-03",
+          "llm-14",
+          "eng-03",
+          "eng-09",
+          "eng-13"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "Agent 重复调用同一个工具 工程上怎么办",
+        "relevant": [
+          "llm-04"
+        ],
+        "retrieved": [
+          "llm-04",
+          "eng-06",
+          "llm-11",
+          "llm-12",
+          "llm-17"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "多轮上下文太长 压缩 记忆",
+        "relevant": [
+          "llm-05"
+        ],
+        "retrieved": [
+          "llm-05",
+          "llm-12",
+          "eng-03",
+          "llm-16",
+          "beh-11"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "大模型当裁判 打分 校准 一致性",
+        "relevant": [
+          "llm-07"
+        ],
+        "retrieved": [
+          "llm-07",
+          "llm-18",
+          "llm-14",
+          "data-03",
+          "llm-15"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "Token 成本超标 从哪下手",
+        "relevant": [
+          "llm-08"
+        ],
+        "retrieved": [
+          "llm-08",
+          "llm-14",
+          "proj-13",
+          "data-02",
+          "eng-03"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "多重检验校正 FDR BH Bonferroni",
+        "relevant": [
+          "data-01"
+        ],
+        "retrieved": [
+          "data-01",
+          "proj-10",
+          "proj-06",
+          "proj-02",
+          "proj-01"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "样本极度不平衡 准确率 AUC 不可靠",
+        "relevant": [
+          "data-02"
+        ],
+        "retrieved": [
+          "data-02",
+          "proj-15",
+          "proj-03",
+          "data-03",
+          "llm-14"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "上线后数据分布漂移 无标注怎么发现",
+        "relevant": [
+          "data-04"
+        ],
+        "retrieved": [
+          "data-04",
+          "data-12",
+          "llm-17",
+          "proj-15",
+          "proj-10"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "上游接口超时 429 重试 降级",
+        "relevant": [
+          "eng-03"
+        ],
+        "retrieved": [
+          "eng-03",
+          "llm-14",
+          "proj-14",
+          "eng-01",
+          "eng-13"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "并发跑几百条请求 怎么控制并发度 异步一定更快吗",
+        "relevant": [
+          "eng-04"
+        ],
+        "retrieved": [
+          "eng-04",
+          "llm-12",
+          "llm-14",
+          "llm-01",
+          "beh-04"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "脚本改成 HTTP 服务 接口和错误处理怎么设计",
+        "relevant": [
+          "eng-01"
+        ],
+        "retrieved": [
+          "eng-01",
+          "eng-03",
+          "llm-14",
+          "eng-06",
+          "eng-14"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "为什么从生物医学工程转做 AI",
+        "relevant": [
+          "beh-02"
+        ],
+        "retrieved": [
+          "beh-02",
+          "beh-08",
+          "llm-11",
+          "proj-17",
+          "beh-01"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "模型评分和人工评分差得远，怎么处理",
+        "relevant": [
+          "llm-07"
+        ],
+        "retrieved": [
+          "llm-14",
+          "llm-07",
+          "data-03",
+          "llm-06",
+          "data-04"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.5,
+        "kind": "semantic"
+      },
+      {
+        "query": "用户抱怨回答半天才出来，从哪查起",
+        "relevant": [
+          "llm-03"
+        ],
+        "retrieved": [
+          "data-04",
+          "eng-13",
+          "proj-05",
+          "beh-07",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "换一批样本结果就崩了，问题出在哪",
+        "relevant": [
+          "proj-06"
+        ],
+        "retrieved": [
+          "proj-05",
+          "data-03",
+          "data-02",
+          "proj-18",
+          "data-04"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "能不能先拿全量数据算好标准化参数再切分",
+        "relevant": [
+          "data-05"
+        ],
+        "retrieved": [
+          "data-05",
+          "data-10",
+          "proj-17",
+          "data-02",
+          "data-13"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "机器人反复执行同一个动作停不下来",
+        "relevant": [
+          "llm-04"
+        ],
+        "retrieved": [
+          "eng-06",
+          "llm-04",
+          "proj-15",
+          "beh-04",
+          "eng-03"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.5,
+        "kind": "semantic"
+      },
+      {
+        "query": "聊到后面就把开头说过的内容忘了",
+        "relevant": [
+          "llm-05"
+        ],
+        "retrieved": [
+          "llm-17",
+          "beh-07",
+          "proj-15",
+          "beh-03",
+          "beh-04"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "月底账单超预算，从哪几个地方省",
+        "relevant": [
+          "llm-08"
+        ],
+        "retrieved": [
+          "data-10",
+          "llm-08",
+          "llm-02",
+          "proj-13",
+          "proj-03"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.5,
+        "kind": "semantic"
+      },
+      {
+        "query": "挑了很多变量但模型好像把答案背下来了",
+        "relevant": [
+          "data-03"
+        ],
+        "retrieved": [
+          "proj-02",
+          "data-04",
+          "data-03",
+          "proj-11",
+          "proj-03"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "系统提示词 写法 指令顺序 长度",
+        "relevant": [
+          "llm-09"
+        ],
+        "retrieved": [
+          "llm-09",
+          "llm-11",
+          "eng-04",
+          "llm-20",
+          "llm-06"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "token 成本估算 上下文占比",
+        "relevant": [
+          "llm-16",
+          "llm-08"
+        ],
+        "retrieved": [
+          "llm-16",
+          "llm-08",
+          "llm-05",
+          "proj-03",
+          "data-02"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "asyncio 会话存储 加锁 并发",
+        "relevant": [
+          "eng-10",
+          "llm-12"
+        ],
+        "retrieved": [
+          "eng-10",
+          "llm-12",
+          "eng-06",
+          "proj-14",
+          "eng-08"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "P95 延迟升高 排查顺序",
+        "relevant": [
+          "eng-13"
+        ],
+        "retrieved": [
+          "eng-13",
+          "data-13",
+          "proj-02",
+          "eng-03",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "kappa paradox 类别不均衡 一致性",
+        "relevant": [
+          "data-09"
+        ],
+        "retrieved": [
+          "data-09",
+          "data-02",
+          "llm-15",
+          "proj-10",
+          "proj-08"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "多重检验校正 BH Bonferroni 区别",
+        "relevant": [
+          "data-01"
+        ],
+        "retrieved": [
+          "data-01",
+          "proj-10",
+          "data-02",
+          "proj-01",
+          "proj-02"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "embedding 模型升级 向量索引重建",
+        "relevant": [
+          "data-12"
+        ],
+        "retrieved": [
+          "data-12",
+          "proj-11",
+          "proj-02",
+          "llm-14",
+          "proj-03"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "三年职业规划 为什么选这个岗位",
+        "relevant": [
+          "beh-09"
+        ],
+        "retrieved": [
+          "beh-09",
+          "beh-01",
+          "llm-12",
+          "data-03",
+          "beh-02"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "面试官让我证明某个改进真的有用，不能凭感觉",
+        "relevant": [
+          "proj-02",
+          "proj-13"
+        ],
+        "retrieved": [
+          "proj-02",
+          "beh-12",
+          "beh-03",
+          "llm-12",
+          "beh-01"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 0.5,
+          "5": 0.5
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "怎么知道搜出来的内容是真相关而不是分数虚高",
+        "relevant": [
+          "proj-11"
+        ],
+        "retrieved": [
+          "data-02",
+          "data-04",
+          "proj-15",
+          "proj-13",
+          "proj-10"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "模型一本正经地胡说八道怎么办",
+        "relevant": [
+          "llm-06"
+        ],
+        "retrieved": [
+          "llm-14",
+          "data-03",
+          "data-08",
+          "data-04",
+          "proj-02"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "对话轮数太多塞不下上下文了怎么办",
+        "relevant": [
+          "llm-05"
+        ],
+        "retrieved": [
+          "llm-05",
+          "llm-12",
+          "beh-03",
+          "eng-03",
+          "llm-16"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "机器人反复做同一个动作停不下来",
+        "relevant": [
+          "llm-04"
+        ],
+        "retrieved": [
+          "proj-15",
+          "eng-06",
+          "beh-03",
+          "llm-04",
+          "beh-04"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 1.0
+        },
+        "rr": 0.25,
+        "kind": "semantic"
+      },
+      {
+        "query": "页面上的回答一个字一个字往外蹦是怎么做到的",
+        "relevant": [
+          "llm-19",
+          "llm-03"
+        ],
+        "retrieved": [
+          "proj-15",
+          "proj-12",
+          "proj-03",
+          "beh-07",
+          "llm-05"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "同一句话换个说法就搜不到了怎么解决",
+        "relevant": [
+          "proj-12"
+        ],
+        "retrieved": [
+          "llm-12",
+          "beh-03",
+          "proj-12",
+          "beh-07",
+          "beh-04"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "付费接口突然不给用了系统怎么不崩",
+        "relevant": [
+          "llm-14"
+        ],
+        "retrieved": [
+          "eng-03",
+          "llm-17",
+          "llm-14",
+          "eng-01",
+          "eng-14"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "机器裁判和真人裁判打分不一致怎么量化差距",
+        "relevant": [
+          "llm-15",
+          "llm-07"
+        ],
+        "retrieved": [
+          "llm-07",
+          "beh-04",
+          "llm-18",
+          "llm-15",
+          "beh-12"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 0.5,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "上线一段时间后用户问的问题类型慢慢变了，怎么发现",
+        "relevant": [
+          "data-04"
+        ],
+        "retrieved": [
+          "data-04",
+          "llm-14",
+          "proj-15",
+          "llm-17",
+          "beh-03"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "考题混进了练习题里，成绩就不算数了",
+        "relevant": [
+          "data-07",
+          "data-05"
+        ],
+        "retrieved": [
+          "proj-09",
+          "proj-13",
+          "proj-18",
+          "data-03",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "班里九十九个健康人一个病人，全猜健康也有九十九分",
+        "relevant": [
+          "data-02"
+        ],
+        "retrieved": [
+          "beh-01",
+          "data-05",
+          "data-02",
+          "proj-07",
+          "data-10"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "对方服务器偶尔发脾气拒绝请求，客户端怎么办",
+        "relevant": [
+          "eng-03",
+          "eng-16"
+        ],
+        "retrieved": [
+          "eng-03",
+          "eng-01",
+          "llm-14",
+          "eng-06",
+          "beh-04"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 0.5,
+          "5": 0.5
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "一个本地脚本想变成团队都能调的网络接口",
+        "relevant": [
+          "eng-01"
+        ],
+        "retrieved": [
+          "eng-01",
+          "eng-06",
+          "llm-11",
+          "eng-03",
+          "proj-14"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "几百个请求一起发出去怎么不把自己打挂",
+        "relevant": [
+          "eng-04"
+        ],
+        "retrieved": [
+          "eng-04",
+          "llm-12",
+          "eng-06",
+          "llm-14",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "升级了翻译模型之后，之前存的指纹还有效吗",
+        "relevant": [
+          "data-12"
+        ],
+        "retrieved": [
+          "proj-11",
+          "llm-14",
+          "data-12",
+          "proj-02",
+          "data-04"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "别人改过的配置被我一保存就覆盖了",
+        "relevant": [
+          "eng-06"
+        ],
+        "retrieved": [
+          "eng-06",
+          "eng-08",
+          "proj-03",
+          "llm-14",
+          "llm-17"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "给领导汇报模型效果，光报数字被打回来了",
+        "relevant": [
+          "data-08"
+        ],
+        "retrieved": [
+          "data-08",
+          "llm-14",
+          "proj-02",
+          "data-04",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "标注人手不够只能测几十条，这笔预算怎么花",
+        "relevant": [
+          "data-10"
+        ],
+        "retrieved": [
+          "data-10",
+          "proj-10",
+          "eng-04",
+          "data-04",
+          "proj-13"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "快到截止日期了发现最重要的指标不达标",
+        "relevant": [
+          "beh-10"
+        ],
+        "retrieved": [
+          "beh-10",
+          "data-02",
+          "data-04",
+          "proj-15",
+          "proj-13"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "上级坚持的方案我验证过是错的怎么办",
+        "relevant": [
+          "beh-12"
+        ],
+        "retrieved": [
+          "beh-12",
+          "beh-04",
+          "llm-14",
+          "proj-13",
+          "eng-03"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "工作里遇到完全没接触过的领域怎么上手",
+        "relevant": [
+          "beh-08"
+        ],
+        "retrieved": [
+          "beh-03",
+          "beh-04",
+          "beh-06",
+          "beh-01",
+          "llm-17"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      }
+    ]
+  },
+  {
+    "queries": 60,
+    "documents": 80,
+    "strategy": "hybrid",
+    "embedder": "bge-small-zh-v1.5 (local weights, not shipped with this repo)",
+    "semantic": true,
+    "recall@1": 0.6417,
+    "recall@3": 0.825,
+    "recall@5": 0.8667,
+    "mrr@10": 0.7672,
+    "hit@1": 0.7,
+    "by_kind": {
+      "literal": {
+        "queries": 30,
+        "recall@1": 0.9167,
+        "recall@3": 0.9667,
+        "recall@5": 1.0,
+        "mrr@10": 1.0,
+        "hit@1": 1.0
+      },
+      "semantic": {
+        "queries": 30,
+        "recall@1": 0.3667,
+        "recall@3": 0.6833,
+        "recall@5": 0.7333,
+        "mrr@10": 0.5344,
+        "hit@1": 0.4
+      }
+    },
+    "cases": [
+      {
+        "query": "RAG 重排 消融实验",
+        "relevant": [
+          "proj-02",
+          "llm-01"
+        ],
+        "retrieved": [
+          "proj-02",
+          "proj-14",
+          "proj-18",
+          "proj-01",
+          "llm-01"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 0.5,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "知识库 chunk 怎么切分 重叠多少",
+        "relevant": [
+          "proj-01"
+        ],
+        "retrieved": [
+          "proj-01",
+          "eng-06",
+          "data-03",
+          "proj-03",
+          "proj-12"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "引用精确率 幻觉 降低编造",
+        "relevant": [
+          "proj-03",
+          "llm-06"
+        ],
+        "retrieved": [
+          "proj-03",
+          "proj-15",
+          "llm-06",
+          "data-03",
+          "data-02"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "McNemar 显著性检验 为什么不用准确率",
+        "relevant": [
+          "proj-04",
+          "data-02"
+        ],
+        "retrieved": [
+          "proj-04",
+          "proj-15",
+          "proj-03",
+          "data-02",
+          "proj-18"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 0.5,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "深度学习跑不过传统方法 负结果归因",
+        "relevant": [
+          "proj-05"
+        ],
+        "retrieved": [
+          "proj-05",
+          "proj-18",
+          "proj-17",
+          "proj-13",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "交叉验证 批次效应 数据泄漏",
+        "relevant": [
+          "proj-06"
+        ],
+        "retrieved": [
+          "proj-06",
+          "data-07",
+          "data-02",
+          "beh-12",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "质谱 峰 特征筛选 830 到 47",
+        "relevant": [
+          "proj-07"
+        ],
+        "retrieved": [
+          "proj-07",
+          "proj-17",
+          "data-03",
+          "eng-04",
+          "proj-03"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "可解释性 线性探针 遮挡法 置换检验",
+        "relevant": [
+          "proj-08"
+        ],
+        "retrieved": [
+          "proj-08",
+          "data-11",
+          "data-02",
+          "proj-15",
+          "proj-06"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "自己搭一套 RAG 分几步",
+        "relevant": [
+          "llm-01"
+        ],
+        "retrieved": [
+          "llm-01",
+          "proj-01",
+          "eng-04",
+          "proj-14",
+          "llm-13"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "向量库选型 FAISS Milvus PGVector",
+        "relevant": [
+          "llm-02"
+        ],
+        "retrieved": [
+          "llm-02",
+          "proj-17",
+          "proj-11",
+          "eng-02",
+          "proj-09"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "流式 TTFT 首字延迟 怎么优化",
+        "relevant": [
+          "llm-03"
+        ],
+        "retrieved": [
+          "llm-03",
+          "llm-14",
+          "eng-03",
+          "eng-09",
+          "eng-13"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "Agent 重复调用同一个工具 工程上怎么办",
+        "relevant": [
+          "llm-04"
+        ],
+        "retrieved": [
+          "llm-04",
+          "eng-06",
+          "llm-11",
+          "llm-12",
+          "llm-14"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "多轮上下文太长 压缩 记忆",
+        "relevant": [
+          "llm-05"
+        ],
+        "retrieved": [
+          "llm-05",
+          "llm-12",
+          "eng-03",
+          "llm-16",
+          "beh-11"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "大模型当裁判 打分 校准 一致性",
+        "relevant": [
+          "llm-07"
+        ],
+        "retrieved": [
+          "llm-07",
+          "llm-18",
+          "llm-15",
+          "llm-06",
+          "beh-04"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "Token 成本超标 从哪下手",
+        "relevant": [
+          "llm-08"
+        ],
+        "retrieved": [
+          "llm-08",
+          "llm-14",
+          "proj-13",
+          "data-02",
+          "eng-03"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "多重检验校正 FDR BH Bonferroni",
+        "relevant": [
+          "data-01"
+        ],
+        "retrieved": [
+          "data-01",
+          "proj-10",
+          "proj-06",
+          "proj-02",
+          "proj-01"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "样本极度不平衡 准确率 AUC 不可靠",
+        "relevant": [
+          "data-02"
+        ],
+        "retrieved": [
+          "data-02",
+          "proj-15",
+          "proj-03",
+          "data-03",
+          "beh-10"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "上线后数据分布漂移 无标注怎么发现",
+        "relevant": [
+          "data-04"
+        ],
+        "retrieved": [
+          "data-04",
+          "data-12",
+          "proj-15",
+          "proj-10",
+          "proj-06"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "上游接口超时 429 重试 降级",
+        "relevant": [
+          "eng-03"
+        ],
+        "retrieved": [
+          "eng-03",
+          "llm-14",
+          "eng-14",
+          "proj-14",
+          "eng-01"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "并发跑几百条请求 怎么控制并发度 异步一定更快吗",
+        "relevant": [
+          "eng-04"
+        ],
+        "retrieved": [
+          "eng-04",
+          "llm-12",
+          "llm-20",
+          "llm-01",
+          "beh-04"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "脚本改成 HTTP 服务 接口和错误处理怎么设计",
+        "relevant": [
+          "eng-01"
+        ],
+        "retrieved": [
+          "eng-01",
+          "eng-03",
+          "llm-14",
+          "eng-06",
+          "eng-14"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "为什么从生物医学工程转做 AI",
+        "relevant": [
+          "beh-02"
+        ],
+        "retrieved": [
+          "beh-02",
+          "beh-08",
+          "llm-11",
+          "proj-17",
+          "data-08"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "模型评分和人工评分差得远，怎么处理",
+        "relevant": [
+          "llm-07"
+        ],
+        "retrieved": [
+          "llm-14",
+          "beh-10",
+          "llm-07",
+          "llm-06",
+          "data-04"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "用户抱怨回答半天才出来，从哪查起",
+        "relevant": [
+          "llm-03"
+        ],
+        "retrieved": [
+          "data-04",
+          "llm-14",
+          "proj-05",
+          "proj-15",
+          "llm-17"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "换一批样本结果就崩了，问题出在哪",
+        "relevant": [
+          "proj-06"
+        ],
+        "retrieved": [
+          "proj-05",
+          "data-03",
+          "data-02",
+          "proj-18",
+          "data-04"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "能不能先拿全量数据算好标准化参数再切分",
+        "relevant": [
+          "data-05"
+        ],
+        "retrieved": [
+          "data-05",
+          "data-10",
+          "data-02",
+          "proj-01",
+          "data-13"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "机器人反复执行同一个动作停不下来",
+        "relevant": [
+          "llm-04"
+        ],
+        "retrieved": [
+          "eng-06",
+          "llm-04",
+          "llm-12",
+          "beh-04",
+          "eng-15"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.5,
+        "kind": "semantic"
+      },
+      {
+        "query": "聊到后面就把开头说过的内容忘了",
+        "relevant": [
+          "llm-05"
+        ],
+        "retrieved": [
+          "llm-17",
+          "beh-07",
+          "proj-15",
+          "beh-03",
+          "llm-05"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 1.0
+        },
+        "rr": 0.2,
+        "kind": "semantic"
+      },
+      {
+        "query": "月底账单超预算，从哪几个地方省",
+        "relevant": [
+          "llm-08"
+        ],
+        "retrieved": [
+          "data-10",
+          "llm-08",
+          "llm-02",
+          "proj-13",
+          "proj-03"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.5,
+        "kind": "semantic"
+      },
+      {
+        "query": "挑了很多变量但模型好像把答案背下来了",
+        "relevant": [
+          "data-03"
+        ],
+        "retrieved": [
+          "proj-02",
+          "data-04",
+          "data-03",
+          "proj-11",
+          "proj-18"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "系统提示词 写法 指令顺序 长度",
+        "relevant": [
+          "llm-09"
+        ],
+        "retrieved": [
+          "llm-09",
+          "llm-11",
+          "llm-17",
+          "eng-04",
+          "llm-20"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "token 成本估算 上下文占比",
+        "relevant": [
+          "llm-16",
+          "llm-08"
+        ],
+        "retrieved": [
+          "llm-16",
+          "llm-08",
+          "llm-05",
+          "proj-03",
+          "data-02"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "asyncio 会话存储 加锁 并发",
+        "relevant": [
+          "eng-10",
+          "llm-12"
+        ],
+        "retrieved": [
+          "eng-10",
+          "llm-12",
+          "eng-04",
+          "eng-06",
+          "proj-14"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "P95 延迟升高 排查顺序",
+        "relevant": [
+          "eng-13"
+        ],
+        "retrieved": [
+          "eng-13",
+          "data-13",
+          "proj-02",
+          "eng-03",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "kappa paradox 类别不均衡 一致性",
+        "relevant": [
+          "data-09"
+        ],
+        "retrieved": [
+          "data-09",
+          "data-02",
+          "beh-04",
+          "llm-15",
+          "proj-10"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "多重检验校正 BH Bonferroni 区别",
+        "relevant": [
+          "data-01"
+        ],
+        "retrieved": [
+          "data-01",
+          "proj-10",
+          "data-02",
+          "proj-01",
+          "proj-02"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "embedding 模型升级 向量索引重建",
+        "relevant": [
+          "data-12"
+        ],
+        "retrieved": [
+          "data-12",
+          "proj-11",
+          "proj-02",
+          "llm-14",
+          "llm-02"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "三年职业规划 为什么选这个岗位",
+        "relevant": [
+          "beh-09"
+        ],
+        "retrieved": [
+          "beh-09",
+          "beh-01",
+          "llm-12",
+          "beh-02",
+          "beh-13"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "literal"
+      },
+      {
+        "query": "面试官让我证明某个改进真的有用，不能凭感觉",
+        "relevant": [
+          "proj-02",
+          "proj-13"
+        ],
+        "retrieved": [
+          "proj-02",
+          "beh-12",
+          "beh-03",
+          "llm-12",
+          "beh-01"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 0.5,
+          "5": 0.5
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "怎么知道搜出来的内容是真相关而不是分数虚高",
+        "relevant": [
+          "proj-11"
+        ],
+        "retrieved": [
+          "proj-15",
+          "llm-17",
+          "proj-13",
+          "proj-10",
+          "proj-06"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "模型一本正经地胡说八道怎么办",
+        "relevant": [
+          "llm-06"
+        ],
+        "retrieved": [
+          "llm-14",
+          "data-03",
+          "data-08",
+          "data-04",
+          "proj-02"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "对话轮数太多塞不下上下文了怎么办",
+        "relevant": [
+          "llm-05"
+        ],
+        "retrieved": [
+          "llm-05",
+          "llm-17",
+          "llm-12",
+          "eng-03",
+          "llm-16"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "机器人反复做同一个动作停不下来",
+        "relevant": [
+          "llm-04"
+        ],
+        "retrieved": [
+          "eng-06",
+          "beh-03",
+          "llm-04",
+          "llm-12",
+          "beh-04"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "页面上的回答一个字一个字往外蹦是怎么做到的",
+        "relevant": [
+          "llm-19",
+          "llm-03"
+        ],
+        "retrieved": [
+          "proj-15",
+          "proj-12",
+          "eng-06",
+          "proj-03",
+          "beh-07"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "同一句话换个说法就搜不到了怎么解决",
+        "relevant": [
+          "proj-12"
+        ],
+        "retrieved": [
+          "llm-12",
+          "beh-03",
+          "proj-12",
+          "eng-06",
+          "beh-07"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "付费接口突然不给用了系统怎么不崩",
+        "relevant": [
+          "llm-14"
+        ],
+        "retrieved": [
+          "eng-03",
+          "llm-17",
+          "llm-14",
+          "eng-01",
+          "eng-14"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "机器裁判和真人裁判打分不一致怎么量化差距",
+        "relevant": [
+          "llm-15",
+          "llm-07"
+        ],
+        "retrieved": [
+          "proj-08",
+          "llm-07",
+          "beh-04",
+          "llm-18",
+          "llm-15"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.5,
+          "5": 1.0
+        },
+        "rr": 0.5,
+        "kind": "semantic"
+      },
+      {
+        "query": "上线一段时间后用户问的问题类型慢慢变了，怎么发现",
+        "relevant": [
+          "data-04"
+        ],
+        "retrieved": [
+          "data-04",
+          "llm-14",
+          "proj-15",
+          "llm-17",
+          "llm-08"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "考题混进了练习题里，成绩就不算数了",
+        "relevant": [
+          "data-07",
+          "data-05"
+        ],
+        "retrieved": [
+          "proj-09",
+          "proj-13",
+          "proj-18",
+          "data-03",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "班里九十九个健康人一个病人，全猜健康也有九十九分",
+        "relevant": [
+          "data-02"
+        ],
+        "retrieved": [
+          "beh-01",
+          "data-05",
+          "data-02",
+          "proj-07",
+          "data-10"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "对方服务器偶尔发脾气拒绝请求，客户端怎么办",
+        "relevant": [
+          "eng-03",
+          "eng-16"
+        ],
+        "retrieved": [
+          "eng-03",
+          "eng-01",
+          "llm-14",
+          "eng-04",
+          "beh-04"
+        ],
+        "recall": {
+          "1": 0.5,
+          "3": 0.5,
+          "5": 0.5
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "一个本地脚本想变成团队都能调的网络接口",
+        "relevant": [
+          "eng-01"
+        ],
+        "retrieved": [
+          "eng-01",
+          "eng-06",
+          "eng-03",
+          "proj-14",
+          "eng-14"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "几百个请求一起发出去怎么不把自己打挂",
+        "relevant": [
+          "eng-04"
+        ],
+        "retrieved": [
+          "eng-04",
+          "llm-12",
+          "eng-06",
+          "llm-14",
+          "proj-15"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "升级了翻译模型之后，之前存的指纹还有效吗",
+        "relevant": [
+          "data-12"
+        ],
+        "retrieved": [
+          "proj-11",
+          "llm-14",
+          "data-12",
+          "proj-02",
+          "data-04"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.333,
+        "kind": "semantic"
+      },
+      {
+        "query": "别人改过的配置被我一保存就覆盖了",
+        "relevant": [
+          "eng-06"
+        ],
+        "retrieved": [
+          "eng-06",
+          "eng-08",
+          "proj-03",
+          "llm-14",
+          "llm-17"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "给领导汇报模型效果，光报数字被打回来了",
+        "relevant": [
+          "data-08"
+        ],
+        "retrieved": [
+          "data-08",
+          "llm-14",
+          "proj-02",
+          "data-04",
+          "proj-18"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "标注人手不够只能测几十条，这笔预算怎么花",
+        "relevant": [
+          "data-10"
+        ],
+        "retrieved": [
+          "data-10",
+          "proj-10",
+          "data-04",
+          "proj-13",
+          "beh-10"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "快到截止日期了发现最重要的指标不达标",
+        "relevant": [
+          "beh-10"
+        ],
+        "retrieved": [
+          "beh-10",
+          "data-02",
+          "data-04",
+          "proj-13",
+          "proj-03"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "上级坚持的方案我验证过是错的怎么办",
+        "relevant": [
+          "beh-12"
+        ],
+        "retrieved": [
+          "beh-12",
+          "beh-04",
+          "llm-14",
+          "proj-13",
+          "eng-03"
+        ],
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "kind": "semantic"
+      },
+      {
+        "query": "工作里遇到完全没接触过的领域怎么上手",
+        "relevant": [
+          "beh-08"
+        ],
+        "retrieved": [
+          "beh-03",
+          "beh-04",
+          "beh-06",
+          "beh-01",
+          "beh-12"
+        ],
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0.0,
+        "kind": "semantic"
+      }
+    ]
+  }
+]

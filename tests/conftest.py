@@ -4,6 +4,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from src.version import __version__
 from src.app import create_app
 from src.core.config import LLMConfig, MetricsConfig, ServerConfig, Settings
 
@@ -12,7 +13,7 @@ from src.core.config import LLMConfig, MetricsConfig, ServerConfig, Settings
 def offline_settings() -> Settings:
     return Settings(
         env="test",
-        version="0.1.0",
+        version=__version__,
         server=ServerConfig(),
         llm=LLMConfig(provider="mock", model="echo-1"),
         metrics=MetricsConfig(enabled=False),
